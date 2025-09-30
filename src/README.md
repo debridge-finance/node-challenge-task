@@ -57,3 +57,13 @@ npm test
 - **kafka/**: Contains the KafkaProducerService
 - **migrations/**: Contains database migrations
 - **test/**: Contains integration tests using Testcontainers
+
+## Что еще можно улучшить
+- Вынести конфигурацию в кастомный ConfigService
+- Использовать @nestjs/schedule для job вместо setInterval
+- Использовать BigNumber или BigInt для работы с ценами
+- Необходим аудит пакетов NPM
+
+## С точки зрения архитектуры
+Чем больше мы зависим от глобальных фреймворков и ORM тем меньше гибкости остается в случае роста проекта.
+Чтобы этого избежать мы можем добавить больше абстракций: абстракные репозитории, порты; сделать бизнес-логику фреймфорк-независимой.
