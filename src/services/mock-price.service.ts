@@ -5,6 +5,7 @@ import { Token } from '../models/token.entity';
 export class MockPriceService {
   async getRandomPriceForToken(token: Token): Promise<number> {
     // Simulate API call delay
+    // NOTE: Можно использовать асинхронные таймеры
     await new Promise<void>((resolve) => {
       setTimeout(() => {
         resolve();

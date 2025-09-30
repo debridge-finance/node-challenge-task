@@ -29,12 +29,12 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     this.isRunning = true;
     this.logger.log(`Starting price update service (interval: ${this.updateIntervalSeconds} seconds)...`);
 
-    this.timer = setInterval(async () => {
-      try {
-        await this.updatePrices();
-      } catch (error) {
+    // Вместо таймеров лучше использовать cron job (@nestjs/schedule)
+    this.timer = setInterval(() => {
+      console.log('start timer');
+      this.updatePrices().catch((error) => {
         this.logger.error(`Error in price update interval: ${error.message}`);
-      }
+      });
     }, this.updateIntervalSeconds * 1000);
 
     // Trigger an initial update immediately
@@ -48,6 +48,7 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
       const tokens = await this.tokenRepository.find();
       this.logger.log(`Updating prices for ${tokens.length} tokens...`);
 
+      // NOTE: Писать данные в бд по очереди не эффективно, сначала обрабатываем потом пишем пачкой
       for (const token of tokens) {
         await this.updateTokenPrice(token);
       }
@@ -61,25 +62,25 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
       const oldPrice = token.price;
       const newPrice = await this.priceService.getRandomPriceForToken(token);
 
-      if (oldPrice !== newPrice) {
-        // Create message for Kafka using Zod helper function
-        const message = createTokenPriceUpdateMessage({
-          tokenId: token.id,
-          symbol: token.symbol || 'UNKNOWN',
-          oldPrice,
-          newPrice,
-          // timestamp will be set to current date by default if not provided
-        });
+      // NOTE: Улучшаем читабельность
+      if (oldPrice === newPrice) return;
+      // Create message for Kafka using Zod helper function
+      const message = createTokenPriceUpdateMessage({
+        tokenId: token.id,
+        symbol: token.symbol || 'UNKNOWN',
+        oldPrice,
+        newPrice,
+        // timestamp will be set to current date by default if not provided
+      });
 
-        await this.kafkaProducer.sendPriceUpdateMessage(message);
+      await this.kafkaProducer.sendPriceUpdateMessage(message);
 
-        // Update token in database
-        token.price = newPrice;
-        token.lastPriceUpdate = new Date();
+      // Update token in database
+      token.price = newPrice;
+      token.lastPriceUpdate = new Date();
 
-        await this.tokenRepository.save(token);
-        this.logger.log(`Updated price for ${token.symbol}: ${oldPrice} -> ${newPrice}`);
-      }
+      await this.tokenRepository.save(token);
+      this.logger.log(`Updated price for ${token.symbol}: ${oldPrice} -> ${newPrice}`);
     } catch (error) {
       this.logger.error(`Error updating price for token ${token.id}: ${error.message}`);
     }
