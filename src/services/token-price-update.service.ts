@@ -11,13 +11,13 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
   private readonly logger = new Logger(TokenPriceUpdateService.name);
   private timer: NodeJS.Timeout;
   private readonly updateIntervalSeconds: number = 5;
-  private isRunning: boolean = false;
+  private isRunning = false;
 
   constructor(
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,
     private readonly priceService: MockPriceService,
-    private readonly kafkaProducer: KafkaProducerService,
+    private readonly kafkaProducer: KafkaProducerService
   ) {}
 
   start(): void {
@@ -28,20 +28,17 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
 
     this.isRunning = true;
     this.logger.log(`Starting price update service (interval: ${this.updateIntervalSeconds} seconds)...`);
-        
-    this.timer = setInterval(      
-      async () => {
-        try {
-          await this.updatePrices();
-        } catch (error) {
-          this.logger.error(`Error in price update interval: ${error.message}`);
-        }
-      },
-      this.updateIntervalSeconds * 1000,
-    );
+
+    this.timer = setInterval(async () => {
+      try {
+        await this.updatePrices();
+      } catch (error) {
+        this.logger.error(`Error in price update interval: ${error.message}`);
+      }
+    }, this.updateIntervalSeconds * 1000);
 
     // Trigger an initial update immediately
-    this.updatePrices().catch(error => {
+    this.updatePrices().catch((error) => {
       this.logger.error(`Error in initial price update: ${error.message}`);
     });
   }
@@ -50,12 +47,12 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     try {
       const tokens = await this.tokenRepository.find();
       this.logger.log(`Updating prices for ${tokens.length} tokens...`);
-      
+
       for (const token of tokens) {
         await this.updateTokenPrice(token);
       }
     } catch (error) {
-      this.logger.error(`Error updating prices: ${error.message}`);      
+      this.logger.error(`Error updating prices: ${error.message}`);
     }
   }
 
@@ -63,7 +60,7 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     try {
       const oldPrice = token.price;
       const newPrice = await this.priceService.getRandomPriceForToken(token);
-      
+
       if (oldPrice !== newPrice) {
         // Create message for Kafka using Zod helper function
         const message = createTokenPriceUpdateMessage({
@@ -73,18 +70,18 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
           newPrice,
           // timestamp will be set to current date by default if not provided
         });
-        
+
         await this.kafkaProducer.sendPriceUpdateMessage(message);
-        
+
         // Update token in database
         token.price = newPrice;
         token.lastPriceUpdate = new Date();
-        
+
         await this.tokenRepository.save(token);
         this.logger.log(`Updated price for ${token.symbol}: ${oldPrice} -> ${newPrice}`);
       }
     } catch (error) {
-      this.logger.error(`Error updating price for token ${token.id}: ${error.message}`);      
+      this.logger.error(`Error updating price for token ${token.id}: ${error.message}`);
     }
   }
 

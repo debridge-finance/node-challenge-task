@@ -10,7 +10,7 @@ export class TokenSeeder {
 
   constructor(
     @InjectRepository(Token)
-    private readonly tokenRepository: Repository<Token>,
+    private readonly tokenRepository: Repository<Token>
   ) {}
 
   async seed(): Promise<void> {
@@ -36,18 +36,18 @@ export class TokenSeeder {
         lastUpdateAuthor: 'Seeder',
         priority: 1,
         timestamp: new Date(),
-        
+
         chain_Id: '11111111-1111-1111-1111-111111111111',
         chain_DeId: 1,
         chain_Name: 'Ethereum',
         chain_IsEnabled: true,
-        
+
         logo_Id: this.generateUuid(),
         logo_TokenId: this.generateUuid(),
         logo_BigRelativePath: '/images/eth_big.png',
         logo_SmallRelativePath: '/images/eth_small.png',
         logo_ThumbRelativePath: '/images/eth_thumb.png',
-        
+
         price: 300000,
         lastPriceUpdate: new Date(),
       },
@@ -62,18 +62,18 @@ export class TokenSeeder {
         lastUpdateAuthor: 'Seeder',
         priority: 2,
         timestamp: new Date(),
-        
+
         chain_Id: '22222222-2222-2222-2222-222222222222',
         chain_DeId: 2,
         chain_Name: 'Bitcoin',
         chain_IsEnabled: true,
-        
+
         logo_Id: this.generateUuid(),
         logo_TokenId: this.generateUuid(),
         logo_BigRelativePath: '/images/btc_big.png',
         logo_SmallRelativePath: '/images/btc_small.png',
         logo_ThumbRelativePath: '/images/btc_thumb.png',
-        
+
         price: 4500000,
         lastPriceUpdate: new Date(),
       },
@@ -88,18 +88,18 @@ export class TokenSeeder {
         lastUpdateAuthor: 'Seeder',
         priority: 3,
         timestamp: new Date(),
-        
+
         chain_Id: '33333333-3333-3333-3333-333333333333',
         chain_DeId: 3,
         chain_Name: 'Solana',
         chain_IsEnabled: true,
-        
+
         logo_Id: this.generateUuid(),
         logo_TokenId: this.generateUuid(),
         logo_BigRelativePath: '/images/sol_big.png',
         logo_SmallRelativePath: '/images/sol_small.png',
         logo_ThumbRelativePath: '/images/sol_thumb.png',
-        
+
         price: 15000,
         lastPriceUpdate: new Date(),
       },
@@ -107,8 +107,8 @@ export class TokenSeeder {
 
     try {
       // Validate each token with Zod schema before saving
-      const validatedTokens = tokenData.map(data => validateToken(data));
-      
+      const validatedTokens = tokenData.map((data) => validateToken(data));
+
       await this.tokenRepository.save(validatedTokens);
       this.logger.log('Initial data seeded successfully');
     } catch (error) {
@@ -118,9 +118,9 @@ export class TokenSeeder {
   }
 
   private generateUuid(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
   }

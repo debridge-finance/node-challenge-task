@@ -27,24 +27,19 @@ import { TokenSeeder } from './data/token.seeder';
     TypeOrmModule.forFeature([Token]),
   ],
   controllers: [],
-  providers: [
-    TokenPriceUpdateService,
-    MockPriceService,
-    KafkaProducerService,
-    TokenSeeder,
-  ],
+  providers: [TokenPriceUpdateService, MockPriceService, KafkaProducerService, TokenSeeder],
 })
 export class AppModule implements OnModuleInit {
   constructor(
     private readonly tokenSeeder: TokenSeeder,
-    private readonly tokenPriceUpdateService: TokenPriceUpdateService,
+    private readonly tokenPriceUpdateService: TokenPriceUpdateService
   ) {}
 
   async onModuleInit() {
     try {
       // Seed initial data
       await this.tokenSeeder.seed();
-      
+
       // Start price update service
       this.tokenPriceUpdateService.start();
     } catch (error) {
