@@ -1,14 +1,16 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Kafka, Producer } from 'kafkajs';
 import { TokenPriceUpdateMessage, tokenPriceUpdateMessageSchema } from '../models/token-price-update-message';
 
 @Injectable()
-export class KafkaProducerService implements OnModuleDestroy {
+export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(KafkaProducerService.name);
-  private readonly producer: Producer;
+  private producer: Producer;
   private readonly topic: string = 'token-price-updates';
+  private isConnected = false;
 
-  constructor() {
+  // NOTE: Конструктор не для асинхронной логики, выносим в отдельный метод
+  async onModuleInit() {
     const kafka = new Kafka({
       clientId: 'token-price-service',
       brokers: ['localhost:9092'],
@@ -30,7 +32,8 @@ export class KafkaProducerService implements OnModuleDestroy {
 
       const value = JSON.stringify(message);
 
-      this.producer.send({
+      // NOTE: Дожидаемся результата
+      await this.producer.send({
         topic: this.topic,
         messages: [
           {
@@ -41,6 +44,7 @@ export class KafkaProducerService implements OnModuleDestroy {
       });
 
       this.logger.log(`Sent message to Kafka: ${value}`);
+      // Можем вернуть результат если нужно
       return;
     } catch (error) {
       this.logger.error(`Error sending message: ${error.message}`);
@@ -49,6 +53,8 @@ export class KafkaProducerService implements OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     try {
+      // NOTE: Не отключаемся до инициализации
+      if (this.producer && !this.isConnected) return;
       await this.producer.disconnect();
       this.logger.log('Disconnected from Kafka');
     } catch (error) {
