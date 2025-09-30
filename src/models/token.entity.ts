@@ -1,4 +1,9 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ValueTransformer } from 'typeorm';
+
+const decimalTransformer: ValueTransformer = {
+  to: (value: number) => value,
+  from: (value: string) => parseFloat(value) || 0,
+};
 
 @Entity('tokens')
 export class Token {
@@ -64,7 +69,9 @@ export class Token {
   @Column({ name: 'logo_thumbrelativepath' })
   logo_ThumbRelativePath: string;
 
-  @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
+  // NOTE: С десятичными работаем в строчном виде, либо храним в копейках и работаем с BigInt
+  // NOTE: Оставляю как есть для совместимости
+  @Column({ type: 'decimal', precision: 28, scale: 0, default: 0, transformer: decimalTransformer })
   price: number;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
