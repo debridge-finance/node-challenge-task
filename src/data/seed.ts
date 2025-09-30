@@ -29,7 +29,7 @@ async function seed() {
 seed()
   .then(() => {
     console.log('Seeding completed successfully');
-    process.exit(0);
+    // NOTE: убираем выход после успешного сида
   })
   .catch((error) => {
     console.error('Failed to seed database:', error);

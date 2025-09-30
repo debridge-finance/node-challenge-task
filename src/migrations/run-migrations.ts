@@ -24,7 +24,7 @@ async function runMigrations() {
 runMigrations()
   .then(() => {
     console.log('Migrations completed successfully');
-    process.exit(0);
+    // NOTE: Не выходим после миграций
   })
   .catch((error) => {
     console.error('Failed to run migrations:', error);
