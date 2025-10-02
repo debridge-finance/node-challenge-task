@@ -26,7 +26,7 @@ export class InitialMigration1684654321000 implements MigrationInterface {
                 "logo_bigrelativepath" character varying NOT NULL,
                 "logo_smallrelativepath" character varying NOT NULL,
                 "logo_thumbrelativepath" character varying NOT NULL,
-                "price" numeric(28,0) NOT NULL DEFAULT '0',
+                "price" numeric(28,8) NOT NULL DEFAULT '0',
                 "lastPriceUpdate" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 CONSTRAINT "PK_tokens" PRIMARY KEY ("id")
             )

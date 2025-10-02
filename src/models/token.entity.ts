@@ -1,5 +1,13 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
+
+
+// АНТИПАТТЕРНЫ: 
+// 1 - Денормализация данных - хранение связанных сущностей в одной таблице
+// 2 - Нарушение нормализации БД - дублирование данных chain и logo
+// 3 - Смешение ответственностей - токен знает о chain и logo деталях
+// 4 - Несогласованные naming conventions например - chain_Id vs chainId
+
 @Entity('tokens')
 export class Token {
   @PrimaryGeneratedColumn('uuid')
@@ -36,6 +44,11 @@ export class Token {
   timestamp: Date;
 
   // Denormalized chain data (intentional anti-pattern)
+
+  // @ManyToOne(() => Chain, { eager: true })
+  // @JoinColumn({ name: 'chain_id' })
+  // chain: Chain;
+
   @Column({ name: 'chain_id', type: 'uuid' })
   chain_Id: string;
 
@@ -47,6 +60,10 @@ export class Token {
 
   @Column({ name: 'chain_isenabled', default: true })
   chain_IsEnabled: boolean;
+
+  // @OneToOne(() => Logo, { eager: true })
+  // @JoinColumn({ name: 'logo_id' })
+  // logo: Logo;
 
   // Denormalized logo data (intentional anti-pattern)
   @Column({ name: 'logo_id', type: 'uuid' })
@@ -64,7 +81,7 @@ export class Token {
   @Column({ name: 'logo_thumbrelativepath' })
   logo_ThumbRelativePath: string;
 
-  @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
+  @Column({ type: 'decimal', precision: 28, scale: 8, default: 0 }) // 8 знаков после запятой для точных цен
   price: number;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })

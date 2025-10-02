@@ -25,25 +25,25 @@ export class KafkaProducerService implements OnModuleDestroy {
   
   async sendPriceUpdateMessage(message: TokenPriceUpdateMessage): Promise<void> {
     try {
-      // Validate the message with Zod schema      
       tokenPriceUpdateMessageSchema.parse(message);
       
-      const value = JSON.stringify(message);
-      
-      this.producer.send({
+      await this.producer.send({ // без await cообщения теряются без обработки ошибок.
         topic: this.topic,
         messages: [
           { 
             key: message.tokenId, 
-            value 
+            value: JSON.stringify(message),
+            timestamp: Date.now().toString()
           },
         ],
       });
       
-      this.logger.log(`Sent message to Kafka: ${value}`);
-      return;
+      this.logger.log(`Successfully sent message to Kafka: ${message.tokenId}`);
+      
     } catch (error) {
-      this.logger.error(`Error sending message: ${error.message}`);      
+      this.logger.error(`Failed to send message to Kafka: ${error.message}`);
+      // retry логику или dead letter queue - must have сделать
+      throw new Error(`Kafka send failed: ${error.message}`);
     }
   }
   
