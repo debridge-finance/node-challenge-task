@@ -7,12 +7,11 @@
 6. migrations arn't transactional
 
 ## What is Done
-1. old code is moved to `src-old`
-2. new project structure in `src` (description in `src/README.md`)
-3. Database migrations are now generated automatically from `core/**/*.entity.ts` files
-4. normalization of data models
-5. simple shared lock implementation for `TokenPriceUpdateService` (not without flaws though)
-6. added `migrationsTransactionMode: "all"`
+1. new project structure in `src` (description in `src/README.md`)
+2. Database migrations are now generated automatically from `core/**/*.entity.ts` files
+3. normalization of data models
+4. simple shared lock implementation for `TokenPriceUpdateService` (not without flaws though)
+5. added `migrationsTransactionMode: "all"`
 
 ## What Isn't Done
 1. full implementation of `TokenPriceUpdateService` new version. Need to add `cron-jobs` for distributes services
