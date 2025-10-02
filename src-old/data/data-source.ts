@@ -11,6 +11,7 @@ export const AppDataSource = new DataSource({
   database: 'tokens',
   entities: [Token],
   migrations: [InitialMigration1684654321000],
-  synchronize: false, // Set to false when using migrations
+  migrationsTransactionMode: "all",
+  synchronize: false,
   logging: true,
 });

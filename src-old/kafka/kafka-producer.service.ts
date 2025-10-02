@@ -15,7 +15,7 @@ export class KafkaProducerService implements OnModuleDestroy {
     });
     
     this.producer = kafka.producer();
-    this.connect();
+    this.connect(); // FIXME: connection in constructor
   }
   
   private async connect(): Promise<void> {

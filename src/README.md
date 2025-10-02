@@ -49,11 +49,33 @@ The integration tests use Testcontainers to spin up PostgreSQL and Kafka in Dock
 npm test
 ```
 
+
+## Generate migrations
+
+```
+npm run migration:generate --name=YourMigrationName
+```
+
 ## Project Structure
 
-- **models/**: Contains the Token and TokenPriceUpdateMessage classes
-- **data/**: Contains the database context and seeder
-- **services/**: Contains the MockPriceService and TokenPriceUpdateService
-- **kafka/**: Contains the KafkaProducerService
-- **migrations/**: Contains database migrations
+- **core**: Contains high abstraction business logic/flows
+  - **core/[module-name]/entity**: data models
+  - **core/[module-name]/services**: business logic implementation
+  - **core/[module-name]/controllers**: nest controllers
+- **tools**: Contains configs for external services
+  - **tools/db/migrations**: Contains database migrations
+  - **tools/kafka**: Contains kafka configuration
+- **types**: Contains shared data types
 - **test/**: Contains integration tests using Testcontainers
+
+
+## Dependency flow
+```mermaid
+flowchart TB
+    Core
+    Tools
+    Types
+
+   Core-->Tools-->Types
+   Core-->Types
+```

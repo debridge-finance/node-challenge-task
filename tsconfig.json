@@ -1,4 +1,5 @@
 {
+  "exclude": ["src-old"],
   "compilerOptions": {
     "module": "commonjs",
     "declaration": true,
