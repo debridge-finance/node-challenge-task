@@ -19,7 +19,7 @@
     "typeorm": "typeorm-ts-node-commonjs -d src/tools/db/connection/data-source.ts",
     "migration:generate": "npm run typeorm -- migration:generate ./src/tools/db/migrations/$npm_config_name",
     "migration:create": "npm run typeorm -- migration:create",
-    "migration:run": "ts-node -r tsconfig-paths/register src/migrations/run-migrations.ts",
+    "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
     "db:seed": "ts-node -r tsconfig-paths/register src/data/seed.ts"
   },
