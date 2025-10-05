@@ -1,6 +1,8 @@
 import { AppDataSource } from './data-source';
 import { TokenSeeder } from './token.seeder';
 import { Token } from '../models/token.entity';
+import { Chain } from '../models/chain.entity';
+import { Logo } from '../models/logo.entity';
 
 async function seed() {
   try {
@@ -8,9 +10,13 @@ async function seed() {
     await AppDataSource.initialize();
     console.log('Data source has been initialized');
 
-    // Create token seeder
+    // Create repositories
     const tokenRepository = AppDataSource.getRepository(Token);
-    const tokenSeeder = new TokenSeeder(tokenRepository);
+    const chainRepository = AppDataSource.getRepository(Chain);
+    const logoRepository = AppDataSource.getRepository(Logo);
+    
+    // Create token seeder with all required repositories
+    const tokenSeeder = new TokenSeeder(tokenRepository, chainRepository, logoRepository);
 
     // Seed data
     await tokenSeeder.seed();

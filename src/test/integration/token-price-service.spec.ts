@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GenericContainer, StartedTestContainer } from 'testcontainers';
 import { Kafka, Consumer, KafkaMessage } from 'kafkajs';
 import { Token } from '../../models/token.entity';
+import { Chain } from '../../models/chain.entity';
+import { Logo } from '../../models/logo.entity';
 import { TokenPriceUpdateService } from '../../services/token-price-update.service';
 import { MockPriceService } from '../../services/mock-price.service';
 import { KafkaProducerService } from '../../kafka/kafka-producer.service';
@@ -102,10 +104,10 @@ describe('TokenPriceService Integration Tests', () => {
             username: 'testuser',
             password: 'testpassword',
             database: 'testdb',
-            entities: [Token],
+            entities: [Token, Chain, Logo],
             synchronize: true,
           }),
-          TypeOrmModule.forFeature([Token]),
+          TypeOrmModule.forFeature([Token, Chain, Logo]),
         ],
         providers: [
           TokenPriceUpdateService,
@@ -153,30 +155,40 @@ describe('TokenPriceService Integration Tests', () => {
   }, 30000);
   
   it('should update token price and send Kafka message', async () => {
+    // Create test chain
+    const chainRepository = moduleRef.get<Repository<Chain>>(getRepositoryToken(Chain));
+    const logoRepository = moduleRef.get<Repository<Logo>>(getRepositoryToken(Logo));
+    
+    const chain = await chainRepository.save({
+      id: '11111111-1111-1111-1111-111111111111',
+      debridgeId: 1,
+      name: 'Test Chain',
+      isEnabled: true,
+    });
+    
     // Create test token
     const token = new Token();
-    token.address = Buffer.from([0x01, 0x02, 0x03]);
+    token.address = '0x010203';
     token.symbol = 'TEST';
     token.name = 'Test Token';
     token.decimals = 18;
     token.isNative = false;
-    token.chainId = '11111111-1111-1111-1111-111111111111';
+    token.chainId = chain.id;
     token.isProtected = false;
     token.priority = 1;
     token.timestamp = new Date();
-    token.chain_Id = '11111111-1111-1111-1111-111111111111';
-    token.chain_DeId = 1;
-    token.chain_Name = 'Test Chain';
-    token.chain_IsEnabled = true;
-    token.logo_Id = '22222222-2222-2222-2222-222222222222';
-    token.logo_TokenId = '33333333-3333-3333-3333-333333333333';
-    token.logo_BigRelativePath = '/test.png';
-    token.logo_SmallRelativePath = '/test_small.png';
-    token.logo_ThumbRelativePath = '/test_thumb.png';
     token.price = 100;
     token.lastPriceUpdate = new Date();
     
-    await tokenRepository.save(token);
+    const savedToken = await tokenRepository.save(token);
+    
+    // Create logo for the token
+    await logoRepository.save({
+      tokenId: savedToken.id,
+      bigRelativePath: '/test.png',
+      smallRelativePath: '/test_small.png',
+      thumbRelativePath: '/test_thumb.png',
+    });
     
     // Start price update service
     tokenPriceUpdateService.start();
@@ -188,7 +200,7 @@ describe('TokenPriceService Integration Tests', () => {
     tokenPriceUpdateService.stop();
     
     // Check if token price was updated in the database
-    const updatedToken = await tokenRepository.findOne({ where: { id: token.id } });
+    const updatedToken = await tokenRepository.findOne({ where: { id: savedToken.id } });
     expect(updatedToken).toBeDefined();
     expect(updatedToken.price).not.toEqual(100);
     

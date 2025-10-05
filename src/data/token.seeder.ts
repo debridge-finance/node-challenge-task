@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from '../models/token.entity';
-import { validateToken } from '../models/token.schema';
+import { Chain } from '../models/chain.entity';
+import { Logo } from '../models/logo.entity';
 
 @Injectable()
 export class TokenSeeder {
@@ -11,6 +12,10 @@ export class TokenSeeder {
   constructor(
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,
+    @InjectRepository(Chain)
+    private readonly chainRepository: Repository<Chain>,
+    @InjectRepository(Logo)
+    private readonly logoRepository: Repository<Logo>,
   ) {}
 
   async seed(): Promise<void> {
@@ -23,10 +28,32 @@ export class TokenSeeder {
 
     this.logger.log('Seeding initial data...');
 
+    // Create chains first
+    const ethereumChain = await this.chainRepository.save({
+      id: '11111111-1111-1111-1111-111111111111',
+      debridgeId: 1,
+      name: 'Ethereum',
+      isEnabled: true,
+    });
+
+    const bitcoinChain = await this.chainRepository.save({
+      id: '22222222-2222-2222-2222-222222222222',
+      debridgeId: 2,
+      name: 'Bitcoin',
+      isEnabled: true,
+    });
+
+    const solanaChain = await this.chainRepository.save({
+      id: '33333333-3333-3333-3333-333333333333',
+      debridgeId: 3,
+      name: 'Solana',
+      isEnabled: true,
+    });
+
     // Define token data and validate with Zod schema
     const tokenData = [
       {
-        address: Buffer.from([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]),
+        address: '0x0000000000000000000000000000000000000000',
         symbol: 'ETH',
         name: 'Ethereum',
         decimals: 18,
@@ -37,22 +64,12 @@ export class TokenSeeder {
         priority: 1,
         timestamp: new Date(),
         
-        chain_Id: '11111111-1111-1111-1111-111111111111',
-        chain_DeId: 1,
-        chain_Name: 'Ethereum',
-        chain_IsEnabled: true,
         
-        logo_Id: this.generateUuid(),
-        logo_TokenId: this.generateUuid(),
-        logo_BigRelativePath: '/images/eth_big.png',
-        logo_SmallRelativePath: '/images/eth_small.png',
-        logo_ThumbRelativePath: '/images/eth_thumb.png',
-        
-        price: 300000,
+        price: 3000.00,
         lastPriceUpdate: new Date(),
       },
       {
-        address: Buffer.from([0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19]),
+        address: '0x1111111111111111111111111111111111111111',
         symbol: 'BTC',
         name: 'Bitcoin',
         decimals: 8,
@@ -63,22 +80,12 @@ export class TokenSeeder {
         priority: 2,
         timestamp: new Date(),
         
-        chain_Id: '22222222-2222-2222-2222-222222222222',
-        chain_DeId: 2,
-        chain_Name: 'Bitcoin',
-        chain_IsEnabled: true,
         
-        logo_Id: this.generateUuid(),
-        logo_TokenId: this.generateUuid(),
-        logo_BigRelativePath: '/images/btc_big.png',
-        logo_SmallRelativePath: '/images/btc_small.png',
-        logo_ThumbRelativePath: '/images/btc_thumb.png',
-        
-        price: 4500000,
+        price: 45000.00,
         lastPriceUpdate: new Date(),
       },
       {
-        address: Buffer.from([0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29]),
+        address: '0x2222222222222222222222222222222222222222',
         symbol: 'SOL',
         name: 'Solana',
         decimals: 9,
@@ -89,27 +96,28 @@ export class TokenSeeder {
         priority: 3,
         timestamp: new Date(),
         
-        chain_Id: '33333333-3333-3333-3333-333333333333',
-        chain_DeId: 3,
-        chain_Name: 'Solana',
-        chain_IsEnabled: true,
         
-        logo_Id: this.generateUuid(),
-        logo_TokenId: this.generateUuid(),
-        logo_BigRelativePath: '/images/sol_big.png',
-        logo_SmallRelativePath: '/images/sol_small.png',
-        logo_ThumbRelativePath: '/images/sol_thumb.png',
-        
-        price: 15000,
+        price: 150.00,
         lastPriceUpdate: new Date(),
       },
     ];
 
     try {
-      // Validate each token with Zod schema before saving
-      const validatedTokens = tokenData.map(data => validateToken(data));
+      // Save tokens
+      for (let i = 0; i < tokenData.length; i++) {
+        const data = tokenData[i];
+        const token = await this.tokenRepository.save(data);
+        
+        // Create logo for each token
+        const logoPath = data.symbol.toLowerCase();
+        await this.logoRepository.save({
+          tokenId: token.id,
+          bigRelativePath: `/images/${logoPath}_big.png`,
+          smallRelativePath: `/images/${logoPath}_small.png`,
+          thumbRelativePath: `/images/${logoPath}_thumb.png`,
+        });
+      }
       
-      await this.tokenRepository.save(validatedTokens);
       this.logger.log('Initial data seeded successfully');
     } catch (error) {
       this.logger.error('Failed to seed initial data', error.stack);
@@ -117,11 +125,4 @@ export class TokenSeeder {
     }
   }
 
-  private generateUuid(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
 }

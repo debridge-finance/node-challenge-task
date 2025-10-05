@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Zod schema for token validation
 export const tokenSchema = z.object({
   id: z.string().uuid().optional(), // Optional for new tokens
-  address: z.instanceof(Buffer),
+  address: z.string(),
   symbol: z.string().nullable().optional(),
   name: z.string().nullable().optional(),
   decimals: z.number().int().min(0).max(32767).default(0), // smallint range

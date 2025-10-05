@@ -1,3 +1,6 @@
+# Refactoring description
+See the [src/PROBLEMS-SOLUTIONS.md](./src/PROBLEMS-SOLUTIONS.md) for detailed information about detected problems.
+
 # Token Price Service Challenge
 
 This repository contains a Node.js challenge task implementing a Token Price Service with intentional anti-patterns and bugs for educational purposes.
