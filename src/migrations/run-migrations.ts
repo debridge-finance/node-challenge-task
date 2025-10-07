@@ -1,32 +1,36 @@
-import { AppDataSource } from '../data/data-source';
+import { AppDataSource } from "../data/data-source";
+import { Logger } from "@nestjs/common";
 
 // Function to run migrations
 async function runMigrations() {
+  const logger = new Logger("Migrations");
+
   try {
     // Initialize the data source
     await AppDataSource.initialize();
-    console.log('Data source has been initialized');
+    logger.log("Data source has been initialized");
 
     // Run migrations
     const migrations = await AppDataSource.runMigrations();
-    console.log(`Successfully ran ${migrations.length} migrations`);
+    logger.log(`Successfully ran ${migrations.length} migrations`);
 
     // Close the connection
     await AppDataSource.destroy();
-    console.log('Data source has been closed');
+    logger.log("Data source has been closed");
   } catch (error) {
-    console.error('Error during migration process:', error);
+    logger.error("Error during migration process:", error);
     process.exit(1);
   }
 }
 
 // Run the migrations
+const logger = new Logger("MigrationRunner");
 runMigrations()
   .then(() => {
-    console.log('Migrations completed successfully');
+    logger.log("Migrations completed successfully");
     process.exit(0);
   })
   .catch((error) => {
-    console.error('Failed to run migrations:', error);
+    logger.error("Failed to run migrations:", error);
     process.exit(1);
   });
