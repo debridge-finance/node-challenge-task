@@ -1,26 +1,39 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Kafka, Producer } from 'kafkajs';
 import { TokenPriceUpdateMessage, tokenPriceUpdateMessageSchema } from '../models/token-price-update-message';
 
+
 @Injectable()
-export class KafkaProducerService implements OnModuleDestroy {
+export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(KafkaProducerService.name);
-  private readonly producer: Producer;
-  private readonly topic: string = 'token-price-updates';
-  
-  constructor() {
+  private producer: Producer;
+  private readonly topic: string;
+
+  constructor(private readonly configService: ConfigService) {
+    const kafkaConfig = this.configService.get('kafka');
+    this.topic = kafkaConfig.topic;
+  }
+
+  async onModuleInit(): Promise<void> {
+    const kafkaConfig = this.configService.get('kafka');
     const kafka = new Kafka({
-      clientId: 'token-price-service',
-      brokers: ['localhost:9092'],
+      clientId: kafkaConfig.clientId,
+      brokers: kafkaConfig.brokers,
     });
     
     this.producer = kafka.producer();
-    this.connect();
+    await this.connect();
   }
-  
+
   private async connect(): Promise<void> {
-    await this.producer.connect();
-    this.logger.log('Connected to Kafka');
+    try {
+      await this.producer.connect();
+      this.logger.log('Connected to Kafka');
+    } catch (error) {
+      this.logger.error('Error connecting to Kafka', error.stack);
+      throw error; // Проброс ошибки для правильной обработки
+    }
   }
   
   async sendPriceUpdateMessage(message: TokenPriceUpdateMessage): Promise<void> {
@@ -30,7 +43,7 @@ export class KafkaProducerService implements OnModuleDestroy {
       
       const value = JSON.stringify(message);
       
-      this.producer.send({
+      await this.producer.send({
         topic: this.topic,
         messages: [
           { 

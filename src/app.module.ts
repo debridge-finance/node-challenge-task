@@ -1,54 +1,47 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Token } from './models/token.entity';
 import { TokenPriceUpdateService } from './services/token-price-update.service';
 import { MockPriceService } from './services/mock-price.service';
+import { PriceService } from './services/price.service.interface';
 import { KafkaProducerService } from './kafka/kafka-producer.service';
 import { TokenSeeder } from './data/token.seeder';
+import { AppInitializationService } from './services/app-initialization.service';
+import { databaseConfig, kafkaConfig, appConfig } from './config/configuration';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [databaseConfig, kafkaConfig, appConfig],
+      envFilePath: ['.env.local', '.env'],
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'postgres',
-      database: 'tokens',
-      entities: [Token],
-      migrations: [__dirname + '/migrations/*.{js,ts}'],
-      migrationsRun: true, // Run migrations automatically
-      synchronize: false, // Disabled when using migrations
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => configService.get('database'),
+      inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([Token]),
   ],
   controllers: [],
   providers: [
     TokenPriceUpdateService,
-    MockPriceService,
+    {
+      provide: PriceService,
+      useClass: MockPriceService,
+    },
     KafkaProducerService,
     TokenSeeder,
+    AppInitializationService,
   ],
 })
 export class AppModule implements OnModuleInit {
   constructor(
-    private readonly tokenSeeder: TokenSeeder,
-    private readonly tokenPriceUpdateService: TokenPriceUpdateService,
+    private readonly appInitializationService: AppInitializationService,
   ) {}
 
   async onModuleInit() {
-    try {
-      // Seed initial data
-      await this.tokenSeeder.seed();
-      
-      // Start price update service
-      this.tokenPriceUpdateService.start();
-    } catch (error) {
-      console.error('Failed to initialize application:', error);
-    }
+    await this.appInitializationService.initialize();
   }
 }

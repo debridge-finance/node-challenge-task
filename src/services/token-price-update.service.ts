@@ -2,21 +2,23 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from '../models/token.entity';
-import { MockPriceService } from './mock-price.service';
+import { PriceService } from './price.service.interface';
 import { KafkaProducerService } from '../kafka/kafka-producer.service';
 import { createTokenPriceUpdateMessage } from '../models/token-price-update-message';
+import { GetTokenPriceDto } from '../dto/token.dto';
 
 @Injectable()
 export class TokenPriceUpdateService implements OnModuleDestroy {
   private readonly logger = new Logger(TokenPriceUpdateService.name);
-  private timer: NodeJS.Timeout;
+  private timer: NodeJS.Timeout | null = null;
   private readonly updateIntervalSeconds: number = 5;
   private isRunning: boolean = false;
+  private isProcessing: boolean = false;
 
   constructor(
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,
-    private readonly priceService: MockPriceService,
+    private readonly priceService: PriceService,
     private readonly kafkaProducer: KafkaProducerService,
   ) {}
 
@@ -31,10 +33,19 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
         
     this.timer = setInterval(      
       async () => {
+        // Предотвращаем параллельное выполнение
+        if (this.isProcessing) {
+          this.logger.warn('Price update already in progress, skipping this interval');
+          return;
+        }
+        
+        this.isProcessing = true;
         try {
           await this.updatePrices();
         } catch (error) {
           this.logger.error(`Error in price update interval: ${error.message}`);
+        } finally {
+          this.isProcessing = false;
         }
       },
       this.updateIntervalSeconds * 1000,
@@ -51,9 +62,23 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
       const tokens = await this.tokenRepository.find();
       this.logger.log(`Updating prices for ${tokens.length} tokens...`);
       
-      for (const token of tokens) {
-        await this.updateTokenPrice(token);
+      // Параллельная обработка токенов с ограничением количества одновременных операций
+      const batchSize = 5; // Обрабатываем по 5 токенов одновременно
+      const batches = [];
+      
+      for (let i = 0; i < tokens.length; i += batchSize) {
+        const batch = tokens.slice(i, i + batchSize);
+        batches.push(batch);
       }
+      
+      // Обрабатываем батчи последовательно, но токены в батче параллельно
+      for (const batch of batches) {
+        await Promise.allSettled(
+          batch.map(token => this.updateTokenPrice(token))
+        );
+      }
+      
+      this.logger.log(`Completed price updates for ${tokens.length} tokens`);
     } catch (error) {
       this.logger.error(`Error updating prices: ${error.message}`);      
     }
@@ -62,7 +87,14 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
   private async updateTokenPrice(token: Token): Promise<void> {
     try {
       const oldPrice = token.price;
-      const newPrice = await this.priceService.getRandomPriceForToken(token);
+      
+      // Создаем DTO для передачи в сервис цен
+      const tokenPriceDto: GetTokenPriceDto = {
+        tokenId: token.id,
+        symbol: token.symbol || 'UNKNOWN',
+      };
+      
+      const newPrice = await this.priceService.getRandomPriceForToken(tokenPriceDto);
       
       if (oldPrice !== newPrice) {
         // Create message for Kafka using Zod helper function
@@ -94,8 +126,12 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
       return;
     }
 
-    clearInterval(this.timer);
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
     this.isRunning = false;
+    this.isProcessing = false;
     this.logger.log('Price update service stopped');
   }
 
