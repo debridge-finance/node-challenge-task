@@ -1,9 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { Token } from '../models/token.entity';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { GetTokenPriceDto, GetTokenPriceDtoSchema } from '../dto/token.dto';
+import { PriceService } from './price.service.interface';
 
 @Injectable()
-export class MockPriceService {
-  async getRandomPriceForToken(token: Token): Promise<number> {
+export class MockPriceService extends PriceService {
+  async getRandomPriceForToken(tokenData: GetTokenPriceDto): Promise<number> {
+    // Валидация входных данных с помощью Zod
+    const validatedData = GetTokenPriceDtoSchema.parse(tokenData);
+    
     // Simulate API call delay  
     await new Promise<void>((resolve) => {
       setTimeout(() => {
