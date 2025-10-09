@@ -1,10 +1,10 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Token } from '../models/token.entity';
 import { MockPriceService } from './mock-price.service';
-import { KafkaProducerService } from '../kafka/kafka-producer.service';
-import { createTokenPriceUpdateMessage } from '../models/token-price-update-message';
+import { createTokenPriceUpdateMessage } from './schema/token-price-update-message';
+import {Token} from "./token.entity";
+import {KafkaProducerService} from "../kafka/kafka-producer.service";
 
 @Injectable()
 export class TokenPriceUpdateService implements OnModuleDestroy {

@@ -46,5 +46,27 @@ services:
       timeout: 10s
       retries: 5
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: tokens
+      KAFKA_BROKER: kafka:9092
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+
 volumes:
   postgres-data:

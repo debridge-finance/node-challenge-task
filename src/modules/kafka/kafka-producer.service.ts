@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Kafka, Producer } from 'kafkajs';
-import { TokenPriceUpdateMessage, tokenPriceUpdateMessageSchema } from '../models/token-price-update-message';
+import {TokenPriceUpdateMessage, tokenPriceUpdateMessageSchema} from "../tokens/schema/token-price-update-message";
+import {ConfigService} from "@nestjs/config";
 
 @Injectable()
 export class KafkaProducerService implements OnModuleDestroy {
@@ -8,10 +9,10 @@ export class KafkaProducerService implements OnModuleDestroy {
   private readonly producer: Producer;
   private readonly topic: string = 'token-price-updates';
   
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
     const kafka = new Kafka({
       clientId: 'token-price-service',
-      brokers: ['localhost:9092'],
+      brokers: [configService.get<string>('KAFKA_BROKER')],
     });
     
     this.producer = kafka.producer();
