@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Token } from '../models/token.entity';
+import {Token} from "./token.entity";
 
 @Injectable()
 export class MockPriceService {

@@ -1,54 +1,23 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
-import { Token } from './models/token.entity';
-import { TokenPriceUpdateService } from './services/token-price-update.service';
-import { MockPriceService } from './services/mock-price.service';
-import { KafkaProducerService } from './kafka/kafka-producer.service';
-import { TokenSeeder } from './data/token.seeder';
+import {ConfigModule} from '@nestjs/config';
+import {TokenModule} from "./modules/tokens/token.module";
+import {KafkaModule} from "./modules/kafka/kafka-module";
+import { ormConfig} from "./data/data-source";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'postgres',
-      database: 'tokens',
-      entities: [Token],
-      migrations: [__dirname + '/migrations/*.{js,ts}'],
-      migrationsRun: true, // Run migrations automatically
-      synchronize: false, // Disabled when using migrations
-    }),
-    TypeOrmModule.forFeature([Token]),
+    TypeOrmModule.forRootAsync(({
+        useFactory:()=>ormConfig
+    })),
+    TokenModule,
+    KafkaModule
   ],
   controllers: [],
   providers: [
-    TokenPriceUpdateService,
-    MockPriceService,
-    KafkaProducerService,
-    TokenSeeder,
   ],
 })
-export class AppModule implements OnModuleInit {
-  constructor(
-    private readonly tokenSeeder: TokenSeeder,
-    private readonly tokenPriceUpdateService: TokenPriceUpdateService,
-  ) {}
-
-  async onModuleInit() {
-    try {
-      // Seed initial data
-      await this.tokenSeeder.seed();
-      
-      // Start price update service
-      this.tokenPriceUpdateService.start();
-    } catch (error) {
-      console.error('Failed to initialize application:', error);
-    }
-  }
-}
+export class AppModule {}

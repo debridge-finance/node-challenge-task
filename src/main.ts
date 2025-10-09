@@ -10,9 +10,10 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     await app.listen(3000);
     logger.log('Service is running on port 3000');
+
   } catch (error) {
-    // Bug: Not handling exceptions properly
-    logger.error(`Error: ${error.message}`);
+      process.exit(1);
+      logger.error(`Error: ${error.message}`);
   }
 }
 bootstrap();
