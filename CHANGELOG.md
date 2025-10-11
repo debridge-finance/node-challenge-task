@@ -148,3 +148,22 @@ Various settings are hardcoded now in different files. It's time to put all them
   * Moved initialization from constructor to onModuleInit for better loading order tracking
   * explicit `createPartitioner` parameter was passed to `kafka.producer` in order to mute warning logged
 
+1.6.1
+=====
+
+Tests are still failing on beforeAll because of wrong kafka container config. This change makes kafka start well and
+uses it instead of the mocked KafkaProducerService. Kafka messages testing is added.
+
+The main problem was in KAFKA_ADVERTISED_LISTENERS config: it should include extarnal port number, but this port number can be only retrieved after container start. So portfinder is used instead to find an unused port in advance. 
+
+There also was getAvailablePort port method that did not check port availability in fact. So it got replaced.
+
+Changes details:
+
+- `package.json`
+  Added `portfinder` dependency
+
+- `token-price-service.spec.ts`
+  * used precalculated port in kafka container config (same for host and container)
+  * made `kafkaConsumer` consume messages in the test
+  * compared consumed message with database entity in the test
