@@ -28,8 +28,49 @@ Now application logs error messages
 
 Changes details:
 
+- `src/main.ts`
+  * Enabled shutdown hooks for proper stopping the app on signals
+  * Added stopping the app on unhandled errors/rejections
+  * Used app.init instead of app.listen because webserver is not needed in the app
+  
+- `token-price-update.service.ts`
+  Crash the app if multiple copies of update handler are running in the same time
+
 - `utils/random.ts`
   Generation of random values for various types
 
 - `token.seeder.ts`
   Now it creates specified amount of random tokens
+
+- `app.module.ts` and `data/seed.ts`
+  10000 tokens requested from seed
+ 
+- `kafka-producer.service.ts`
+  Just some delay on destroy to make the problem visible
+
+1.2.0
+=====
+
+Fix of module destroy order:
+- updated nest.js to version 11 as it supports proper init/destroy order
+- split services to 3 dependent modules: app -> price -> kafka to make kafka destroyed only after prices
+- chanded price update service destroy to wait for loop end 
+
+Now application does not log any errors on Ctrl-C or just on wait, but it just continues updating prices because there are too many tokens to process in a loop, and the loop is not stopped on destroy. It will be fixed later.
+
+Changes details:
+  
+- `package.json`
+  Updated nest.js to version 11
+
+- `kafka.module.ts` and `price.module.ts`
+  Created new module defiitions
+
+- `app.module.ts`, `kafka-producer.service.ts`, `mock-price.service.ts`
+  Updated paths and dependencies
+
+- `token-price-update.service.ts`
+  * Changed setInterval to setTimeout to prevent race in case when single update loop takes too long
+  * Made updatingPrices variable awaitable for proper destroy
+  * onModuleDestroy() and stop() are async now
+

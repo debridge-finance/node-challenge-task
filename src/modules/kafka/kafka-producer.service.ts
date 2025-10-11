@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Kafka, Producer } from 'kafkajs';
-import { TokenPriceUpdateMessage, tokenPriceUpdateMessageSchema } from '../models/token-price-update-message';
+import { TokenPriceUpdateMessage, tokenPriceUpdateMessageSchema } from '../../models/token-price-update-message';
 
 @Injectable()
 export class KafkaProducerService implements OnModuleDestroy {
@@ -48,6 +48,7 @@ export class KafkaProducerService implements OnModuleDestroy {
   }
   
   async onModuleDestroy(): Promise<void> {
+    this.logger.log('Disconnecting from Kafka');
     try {
       await this.producer.disconnect();
       // artifical delay demonstrating destroy order problem

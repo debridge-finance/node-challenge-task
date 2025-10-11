@@ -1,11 +1,12 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { Token } from './models/token.entity';
-import { TokenPriceUpdateService } from './services/token-price-update.service';
-import { MockPriceService } from './services/mock-price.service';
-import { KafkaProducerService } from './kafka/kafka-producer.service';
-import { TokenSeeder } from './data/token.seeder';
+import { PriceModule } from '../price/price.module';
+import { Token } from '../../models/token.entity';
+import { TokenPriceUpdateService } from '../price/token-price-update.service';
+import { MockPriceService } from '../price/mock-price.service';
+import { KafkaProducerService } from '../kafka/kafka-producer.service';
+import { TokenSeeder } from '../../data/token.seeder';
 
 @Module({
   imports: [
@@ -25,12 +26,9 @@ import { TokenSeeder } from './data/token.seeder';
       synchronize: false, // Disabled when using migrations
     }),
     TypeOrmModule.forFeature([Token]),
+    PriceModule,
   ],
-  controllers: [],
   providers: [
-    TokenPriceUpdateService,
-    MockPriceService,
-    KafkaProducerService,
     TokenSeeder,
   ],
 })
