@@ -8,10 +8,10 @@ export class Token {
   @Column({ type: 'bytea' })
   address: Buffer;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   symbol: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   name: string | null;
 
   @Column({ type: 'smallint', default: 0 })
@@ -26,7 +26,7 @@ export class Token {
   @Column({ default: false })
   isProtected: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   lastUpdateAuthor: string | null;
 
   @Column({ default: 0 })

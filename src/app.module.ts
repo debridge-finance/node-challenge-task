@@ -14,25 +14,21 @@ import { TokenSeeder } from './data/token.seeder';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'postgres',
-      database: 'tokens',
+      host: process.env.DATABASE_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT || '5432', 10),
+      username: process.env.DATABASE_USERNAME || 'postgres',
+      password: process.env.DATABASE_PASSWORD || 'postgres',
+      database: process.env.DATABASE_NAME || 'tokens',
       entities: [Token],
       migrations: [__dirname + '/migrations/*.{js,ts}'],
       migrationsRun: true, // Run migrations automatically
       synchronize: false, // Disabled when using migrations
+      ssl: false,
     }),
     TypeOrmModule.forFeature([Token]),
   ],
   controllers: [],
-  providers: [
-    TokenPriceUpdateService,
-    MockPriceService,
-    KafkaProducerService,
-    TokenSeeder,
-  ],
+  providers: [TokenPriceUpdateService, MockPriceService, KafkaProducerService, TokenSeeder],
 })
 export class AppModule implements OnModuleInit {
   constructor(
@@ -44,7 +40,7 @@ export class AppModule implements OnModuleInit {
     try {
       // Seed initial data
       await this.tokenSeeder.seed();
-      
+
       // Start price update service
       this.tokenPriceUpdateService.start();
     } catch (error) {
