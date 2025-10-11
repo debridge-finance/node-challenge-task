@@ -1,6 +1,6 @@
 {
   "name": "token-price-service",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A token price service with intentional anti-patterns and bugs for educational purposes",
   "main": "dist/main.js",
   "scripts": {

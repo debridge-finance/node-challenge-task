@@ -1,4 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { columnNumericTransformer } from '../utils/entity';
 
 @Entity('tokens')
 export class Token {
@@ -64,7 +65,13 @@ export class Token {
   @Column({ name: 'logo_thumbrelativepath' })
   logo_ThumbRelativePath: string;
 
-  @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
+  @Column({ 
+    type: 'decimal', 
+    precision: 28, 
+    scale: 0, 
+    default: 0,
+    transformer: columnNumericTransformer,
+  })
   price: number;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })

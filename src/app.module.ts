@@ -20,7 +20,7 @@ import { TokenSeeder } from './data/token.seeder';
       password: 'postgres',
       database: 'tokens',
       entities: [Token],
-      migrations: [__dirname + '/migrations/*.{js,ts}'],
+      migrations: [__dirname + '/migrations/[0-9]*.{js,ts}'],
       migrationsRun: true, // Run migrations automatically
       synchronize: false, // Disabled when using migrations
     }),

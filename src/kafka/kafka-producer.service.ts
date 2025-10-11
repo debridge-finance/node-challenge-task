@@ -30,7 +30,7 @@ export class KafkaProducerService implements OnModuleDestroy {
       
       const value = JSON.stringify(message);
       
-      this.producer.send({
+      await this.producer.send({
         topic: this.topic,
         messages: [
           { 
