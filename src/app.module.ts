@@ -43,7 +43,7 @@ export class AppModule implements OnModuleInit {
   async onModuleInit() {
     try {
       // Seed initial data
-      await this.tokenSeeder.seed();
+      await this.tokenSeeder.seed(10000);
       
       // Start price update service
       this.tokenPriceUpdateService.start();

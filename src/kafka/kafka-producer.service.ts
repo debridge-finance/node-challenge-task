@@ -50,6 +50,8 @@ export class KafkaProducerService implements OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     try {
       await this.producer.disconnect();
+      // artifical delay demonstrating destroy order problem
+      await new Promise(resolve => setTimeout(resolve, 1000));
       this.logger.log('Disconnected from Kafka');
     } catch (error) {
       this.logger.error('Error disconnecting from Kafka', error.stack);

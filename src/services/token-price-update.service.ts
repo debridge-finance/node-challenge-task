@@ -12,6 +12,7 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
   private timer: NodeJS.Timeout;
   private readonly updateIntervalSeconds: number = 5;
   private isRunning: boolean = false;
+  private updatingPrices: boolean = false;
 
   constructor(
     @InjectRepository(Token)
@@ -30,13 +31,7 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     this.logger.log(`Starting price update service (interval: ${this.updateIntervalSeconds} seconds)...`);
         
     this.timer = setInterval(      
-      async () => {
-        try {
-          await this.updatePrices();
-        } catch (error) {
-          this.logger.error(`Error in price update interval: ${error.message}`);
-        }
-      },
+      () => this.updatePrices(),
       this.updateIntervalSeconds * 1000,
     );
 
@@ -47,6 +42,11 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
   }
 
   private async updatePrices(): Promise<void> {
+    if (this.updatingPrices) {
+      throw new Error('Updating is still in progress');
+    }
+    this.updatingPrices = true;
+    
     try {
       const tokens = await this.tokenRepository.find();
       this.logger.log(`Updating prices for ${tokens.length} tokens...`);
@@ -56,6 +56,8 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
       }
     } catch (error) {
       this.logger.error(`Error updating prices: ${error.message}`);      
+    } finally {
+      this.updatingPrices = false;
     }
   }
 

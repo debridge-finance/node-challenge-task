@@ -8,11 +8,27 @@ async function bootstrap() {
   
   try {
     const app = await NestFactory.create(AppModule);
-    await app.listen(3000);
-    logger.log('Service is running on port 3000');
-  } catch (error) {
-    // Bug: Not handling exceptions properly
-    logger.error(`Error: ${error.message}`);
+
+    // Enable graceful shutdown
+    app.enableShutdownHooks();
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+      logger.error(`Uncaught Exception: ${error?.message}`, error?.stack);
+      app.close();
+    });
+
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error(`Unhandled Rejection at: ${promise} reason: `, reason);
+      app.close();
+    });
+
+    // The app does not handle HTTP requests, so use init instead of listen
+    await app.init();
+  } catch (error: any) {
+    logger.error(`Failed to start application: ${error?.message}`, error?.stack);
   }
 }
+
 bootstrap();

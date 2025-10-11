@@ -13,7 +13,7 @@ async function seed() {
     const tokenSeeder = new TokenSeeder(tokenRepository);
 
     // Seed data
-    await tokenSeeder.seed();
+    await tokenSeeder.seed(10000);
     console.log('Database seeded successfully');
 
     // Close the connection
