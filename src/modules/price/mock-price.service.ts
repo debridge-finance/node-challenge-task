@@ -3,7 +3,11 @@ import { Token } from '../../models/token.entity';
 
 @Injectable()
 export class MockPriceService {
-  async getRandomPriceForToken(token: Token): Promise<number> {
+  async getRandomPriceForToken(_: {
+    id: string;
+    address: Buffer;
+    chainId: string;
+  }): Promise<number> {
     // Simulate API call delay  
     await new Promise<void>((resolve) => {
       setTimeout(() => {

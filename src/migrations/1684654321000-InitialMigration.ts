@@ -17,7 +17,6 @@ export class InitialMigration1684654321000 implements MigrationInterface {
                 "lastUpdateAuthor" character varying,
                 "priority" integer NOT NULL DEFAULT '0',
                 "timestamp" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                "chain_id" uuid NOT NULL,
                 "chain_deid" numeric NOT NULL,
                 "chain_name" character varying NOT NULL,
                 "chain_isenabled" boolean NOT NULL DEFAULT true,

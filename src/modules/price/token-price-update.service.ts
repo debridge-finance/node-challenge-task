@@ -6,6 +6,17 @@ import { MockPriceService } from './mock-price.service';
 import { KafkaProducerService } from '../kafka/kafka-producer.service';
 import { createTokenPriceUpdateMessage } from '../../models/token-price-update-message';
 
+const TokenFields = [
+  'id',
+  'address',
+  'chainId',
+  'symbol',
+  'price',
+  'lastPriceUpdate',
+] as const;
+
+type TokenPartial = Pick<Token, (typeof TokenFields)[number]>;
+
 @Injectable()
 export class TokenPriceUpdateService implements OnModuleDestroy {
   private readonly logger = new Logger(TokenPriceUpdateService.name);
@@ -16,7 +27,7 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
 
   constructor(
     @InjectRepository(Token)
-    private readonly tokenRepository: Repository<Token>,
+    private readonly tokenRepository: Repository<TokenPartial>,
     private readonly priceService: MockPriceService,
     private readonly kafkaProducer: KafkaProducerService,
   ) {}
@@ -58,7 +69,8 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
   }
 
   private async updatePricesBatch(fromId: string | null, batchSize: number): Promise<string | null> {
-    const findOptions: FindManyOptions<Token> = {
+    const findOptions: FindManyOptions<TokenPartial> = {
+      select: [...TokenFields],
       order: { id: "ASC" },
       take: batchSize,
     }
@@ -79,10 +91,14 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     return tokens.length >= batchSize ? tokens[tokens.length - 1].id : null;
   }
 
-  private async updateTokenPrice(token: Token): Promise<Token | null> {
+  private async updateTokenPrice(token: TokenPartial): Promise<TokenPartial | null> {
     try {
       const oldPrice = token.price;
-      const newPrice = await this.priceService.getRandomPriceForToken(token);
+      const newPrice = await this.priceService.getRandomPriceForToken({
+        id: token.id,
+        address: token.address,
+        chainId: token.chainId,
+      });
       
       if (oldPrice !== newPrice) {
         // Create message for Kafka using Zod helper function

@@ -88,3 +88,20 @@ Changes details:
   * tokens are loaded in batches, so parallelism is under control
   * batches ordered by id, next batch starts on the last id of previous one
   * loop break is introduced on destroy
+
+1.4.0
+=====
+
+More performance improvements: don't load unused columns from database. Also there is duplicate chain_id column because of denormalization. It could be removed safely.
+
+- `token-price-update.service.ts`
+  * use TokenFields list in `select` option of `tokenRepository.find`
+  * use TokenPartial type instead of Token to correctly represent partial Token object
+
+- `mock-price.service`
+  Most likely real token price calculation will not require all token fields. So I only kept id, chainId and address. 
+
+- `token.entity.ts`, `token.schema.ts`, `1684654321000-InitialMigration.ts`, `token.seeder.ts` and others
+  Removed duplicate chain_Id field
+
+

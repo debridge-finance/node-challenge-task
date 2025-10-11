@@ -15,7 +15,6 @@ export const tokenSchema = z.object({
   timestamp: z.date().default(() => new Date()),
   
   // Denormalized chain data
-  chain_Id: z.string().uuid(),
   chain_DeId: z.number(),
   chain_Name: z.string(),
   chain_IsEnabled: z.boolean().default(true),

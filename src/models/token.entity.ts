@@ -37,9 +37,6 @@ export class Token {
   timestamp: Date;
 
   // Denormalized chain data (intentional anti-pattern)
-  @Column({ name: 'chain_id', type: 'uuid' })
-  chain_Id: string;
-
   @Column({ name: 'chain_deid', type: 'decimal' })
   chain_DeId: number;
 

@@ -164,7 +164,6 @@ describe('TokenPriceService Integration Tests', () => {
     token.isProtected = false;
     token.priority = 1;
     token.timestamp = new Date();
-    token.chain_Id = '11111111-1111-1111-1111-111111111111';
     token.chain_DeId = 1;
     token.chain_Name = 'Test Chain';
     token.chain_IsEnabled = true;

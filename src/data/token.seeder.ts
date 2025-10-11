@@ -68,7 +68,6 @@ export class TokenSeeder {
       price: getRandomFloat(100000),
       lastPriceUpdate: new Date(),
       
-      chain_Id: chain.id,
       chain_DeId,
       chain_Name: chain.name,
       chain_IsEnabled: true,

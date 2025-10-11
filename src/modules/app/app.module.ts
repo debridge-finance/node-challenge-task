@@ -4,8 +4,6 @@ import { ConfigModule } from '@nestjs/config';
 import { PriceModule } from '../price/price.module';
 import { Token } from '../../models/token.entity';
 import { TokenPriceUpdateService } from '../price/token-price-update.service';
-import { MockPriceService } from '../price/mock-price.service';
-import { KafkaProducerService } from '../kafka/kafka-producer.service';
 import { TokenSeeder } from '../../data/token.seeder';
 
 @Module({
@@ -21,7 +19,7 @@ import { TokenSeeder } from '../../data/token.seeder';
       password: 'postgres',
       database: 'tokens',
       entities: [Token],
-      migrations: [__dirname + '/migrations/[0-9]*.{js,ts}'],
+      migrations: [__dirname + '/../../migrations/[0-9]*.{js,ts}'],
       migrationsRun: true, // Run migrations automatically
       synchronize: false, // Disabled when using migrations
     }),
@@ -47,6 +45,7 @@ export class AppModule implements OnModuleInit {
       this.tokenPriceUpdateService.start();
     } catch (error) {
       console.error('Failed to initialize application:', error);
+      throw error;
     }
   }
 }
