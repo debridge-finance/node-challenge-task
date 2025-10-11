@@ -9,10 +9,10 @@ export class Token {
   address: Buffer;
 
   @Column({ nullable: true })
-  symbol: string;
+  symbol: string | null;
 
   @Column({ nullable: true })
-  name: string;
+  name: string | null;
 
   @Column({ type: 'smallint', default: 0 })
   decimals: number;
@@ -27,7 +27,7 @@ export class Token {
   isProtected: boolean;
 
   @Column({ nullable: true })
-  lastUpdateAuthor: string;
+  lastUpdateAuthor: string | null;
 
   @Column({ default: 0 })
   priority: number;
@@ -39,7 +39,7 @@ export class Token {
   @Column({ name: 'chain_id', type: 'uuid' })
   chain_Id: string;
 
-  @Column({ name: 'chain_deid', type: 'decimal' })
+  @Column({ name: 'chain_deid', type: 'integer' })
   chain_DeId: number;
 
   @Column({ name: 'chain_name' })
@@ -53,7 +53,7 @@ export class Token {
   logo_Id: string;
 
   @Column({ name: 'logo_tokenid', type: 'uuid', nullable: true })
-  logo_TokenId: string;
+  logo_TokenId: string | null;
 
   @Column({ name: 'logo_bigrelativepath' })
   logo_BigRelativePath: string;
