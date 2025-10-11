@@ -74,3 +74,17 @@ Changes details:
   * Made updatingPrices variable awaitable for proper destroy
   * onModuleDestroy() and stop() are async now
 
+
+1.3.0
+=====
+
+Made updates processig parallel for better performance. Now updates are processed much faster and Ctrl-C also works well.
+
+Changes details:
+
+- `token-price-update.service.ts`
+  * updateTokenPrice is called for all loaded tokens in parallel with Promise.all
+  * saving to database is done also for all tokens at once
+  * tokens are loaded in batches, so parallelism is under control
+  * batches ordered by id, next batch starts on the last id of previous one
+  * loop break is introduced on destroy

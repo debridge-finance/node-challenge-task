@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan, FindManyOptions } from 'typeorm';
 import { Token } from '../../models/token.entity';
 import { MockPriceService } from './mock-price.service';
 import { KafkaProducerService } from '../kafka/kafka-producer.service';
@@ -40,7 +40,11 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     }
 
     try {
-      await this.updatePricesAll();
+      let startTokenId: string | null = null;
+
+      do {
+        startTokenId = await this.updatePricesBatch(startTokenId, 1000);
+      } while(this.isRunning && startTokenId != null)
     } catch (error: any) {
       this.logger.error(`Error updating prices: ${error?.message}`, error?.stack);      
     } finally {
@@ -53,16 +57,29 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     }
   }
 
-  private async updatePricesAll(): Promise<void> {
-    const tokens = await this.tokenRepository.find();
+  private async updatePricesBatch(fromId: string | null, batchSize: number): Promise<string | null> {
+    const findOptions: FindManyOptions<Token> = {
+      order: { id: "ASC" },
+      take: batchSize,
+    }
+    if (fromId != null) {
+      findOptions.where = { id: MoreThan(fromId) }
+    }
+    const tokens = await this.tokenRepository.find(findOptions);
     this.logger.log(`Updating prices for ${tokens.length} tokens...`);
     
-    for (const token of tokens) {
-      await this.updateTokenPrice(token);
-    }
+    let updatedTokens = await Promise.all(tokens.map(token => this.updateTokenPrice(token)));
+
+    // keep only updated tokens
+    updatedTokens = updatedTokens.filter(token => token);
+    await this.tokenRepository.save(tokens, {
+      reload: false,
+    });
+
+    return tokens.length >= batchSize ? tokens[tokens.length - 1].id : null;
   }
 
-  private async updateTokenPrice(token: Token): Promise<void> {
+  private async updateTokenPrice(token: Token): Promise<Token | null> {
     try {
       const oldPrice = token.price;
       const newPrice = await this.priceService.getRandomPriceForToken(token);
@@ -83,12 +100,15 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
         token.price = newPrice;
         token.lastPriceUpdate = new Date();
         
-        await this.tokenRepository.save(token);
         this.logger.log(`Updated price for ${token.symbol}: ${oldPrice} -> ${newPrice}`);
+
+        return token;
       }
-    } catch (error) {
-      this.logger.error(`Error updating price for token ${token.id}: ${error.message}`);      
+    } catch (error: any) {
+      this.logger.error(`Error updating price for token ${token.id}: ${error?.message}`);      
     }
+
+    return null;
   }
 
   async stop(): Promise<void> {
