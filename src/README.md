@@ -17,7 +17,7 @@ This service maintains information about various tokens (ERC20, Solana, etc.) in
 
 ## Prerequisites
 
-- Node.js (v18 or higher)
+- Node.js (v20 or higher)
 - Docker (for running tests with Testcontainers)
 - PostgreSQL
 - Kafka
@@ -51,9 +51,12 @@ npm test
 
 ## Project Structure
 
+- **config/**: Configuration factories for database, kafka and price module
 - **models/**: Contains the Token and TokenPriceUpdateMessage classes
 - **data/**: Contains the database context and seeder
-- **services/**: Contains the MockPriceService and TokenPriceUpdateService
-- **kafka/**: Contains the KafkaProducerService
+- **modules/app/**: Contains the AppModule
+- **modules/price/**: Contains the PriceModule, MockPriceService and TokenPriceUpdateService
+- **modules/kafka/**: Contains the KafkaModule and KafkaProducerService
 - **migrations/**: Contains database migrations
 - **test/**: Contains integration tests using Testcontainers
+- **utils**: Reusable helpers: entity and random

@@ -1,74 +1,74 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-import { columnNumericTransformer } from '../utils/entity';
+import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
+import { columnNumericTransformer } from "../utils/entity";
 
-@Entity('tokens')
+@Entity("tokens")
 export class Token {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ type: 'bytea' })
+  @Column({ type: "bytea" })
   address: Buffer;
 
   @Column({ nullable: true })
-  symbol: string;
+  symbol?: string;
 
   @Column({ nullable: true })
-  name: string;
+  name?: string;
 
-  @Column({ type: 'smallint', default: 0 })
+  @Column({ type: "smallint", default: 0 })
   decimals: number;
 
   @Column({ default: false })
   isNative: boolean;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: "uuid" })
   chainId: string;
 
   @Column({ default: false })
   isProtected: boolean;
 
   @Column({ nullable: true })
-  lastUpdateAuthor: string;
+  lastUpdateAuthor?: string;
 
   @Column({ default: 0 })
   priority: number;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   timestamp: Date;
 
-  @Column({ 
-    type: 'float8', 
+  @Column({
+    type: "float8",
     default: 0,
     transformer: columnNumericTransformer,
   })
   price: number;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   lastPriceUpdate: Date;
 
   // Denormalized chain data (intentional anti-pattern)
-  @Column({ name: 'chain_deid', type: 'decimal' })
+  @Column({ name: "chain_deid", type: "decimal" })
   chain_DeId: number;
 
-  @Column({ name: 'chain_name' })
+  @Column({ name: "chain_name" })
   chain_Name: string;
 
-  @Column({ name: 'chain_isenabled', default: true })
+  @Column({ name: "chain_isenabled", default: true })
   chain_IsEnabled: boolean;
 
   // Denormalized logo data (intentional anti-pattern)
-  @Column({ name: 'logo_id', type: 'uuid' })
+  @Column({ name: "logo_id", type: "uuid" })
   logo_Id: string;
 
-  @Column({ name: 'logo_tokenid', type: 'uuid', nullable: true })
-  logo_TokenId: string;
+  @Column({ name: "logo_tokenid", type: "uuid", nullable: true })
+  logo_TokenId?: string;
 
-  @Column({ name: 'logo_bigrelativepath' })
+  @Column({ name: "logo_bigrelativepath" })
   logo_BigRelativePath: string;
 
-  @Column({ name: 'logo_smallrelativepath' })
+  @Column({ name: "logo_smallrelativepath" })
   logo_SmallRelativePath: string;
 
-  @Column({ name: 'logo_thumbrelativepath' })
+  @Column({ name: "logo_thumbrelativepath" })
   logo_ThumbRelativePath: string;
 }

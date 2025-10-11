@@ -1,19 +1,19 @@
-import { Injectable, Inject, Logger, OnModuleDestroy } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan, FindManyOptions } from 'typeorm';
-import { Token } from '../../models/token.entity';
-import { MockPriceService } from './mock-price.service';
-import { KafkaProducerService } from '../kafka/kafka-producer.service';
-import { createTokenPriceUpdateMessage } from '../../models/token-price-update-message';
-import priceConfig, { PriceConfig } from '../../config/price.config';
+import { Injectable, Inject, Logger, OnModuleDestroy } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, MoreThan, FindManyOptions } from "typeorm";
+import { Token } from "../../models/token.entity";
+import { MockPriceService } from "./mock-price.service";
+import { KafkaProducerService } from "../kafka/kafka-producer.service";
+import { createTokenPriceUpdateMessage } from "../../models/token-price-update-message";
+import priceConfig, { PriceConfig } from "../../config/price.config";
 
 const TokenFields = [
-  'id',
-  'address',
-  'chainId',
-  'symbol',
-  'price',
-  'lastPriceUpdate',
+  "id",
+  "address",
+  "chainId",
+  "symbol",
+  "price",
+  "lastPriceUpdate",
 ] as const;
 
 type TokenPartial = Pick<Token, (typeof TokenFields)[number]>;
@@ -31,69 +31,77 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<TokenPartial>,
     private readonly priceService: MockPriceService,
-    private readonly kafkaProducer: KafkaProducerService,
+    private readonly kafkaProducer: KafkaProducerService
   ) {}
 
   start(): void {
     if (this.isRunning) {
-      this.logger.warn('Price update service is already running');
+      this.logger.warn("Price update service is already running");
       return;
     }
 
     this.isRunning = true;
-    this.logger.log(`Starting price update service (timeout: ${this.config.updateTimeoutMs} ms, batch size: ${this.config.batchSize})...`);
-      
+    this.logger.log(
+      `Starting price update service (timeout: ${this.config.updateTimeoutMs} ms, batch size: ${this.config.batchSize})...`
+    );
+
     // Trigger an initial update immediately
     this.updatingPrices = this.updatePrices();
   }
 
   private async updatePrices(): Promise<void> {
-    if (this.updatingPrices) {
-      throw new Error('Updating is still in progress');
-    }
-
     try {
       let startTokenId: string | null = null;
 
       do {
-        startTokenId = await this.updatePricesBatch(startTokenId, this.config.batchSize);
-      } while(this.isRunning && startTokenId != null)
-    } catch (error: any) {
-      this.logger.error(`Error updating prices: ${error?.message}`, error?.stack);      
+        startTokenId = await this.updatePricesBatch(
+          startTokenId,
+          this.config.batchSize
+        );
+      } while (this.isRunning && startTokenId != null);
+    } catch (error) {
+      const { message, stack } = error instanceof Error ? error : ({} as Error);
+      this.logger.error(`Error updating prices: ${message || error}`, stack);
     } finally {
-      this.updatingPrices = null;
       if (this.isRunning) {
         this.timer = setTimeout(() => {
           this.updatingPrices = this.updatePrices();
-        }, this.config.updateTimeoutMs)
+        }, this.config.updateTimeoutMs);
       }
     }
   }
 
-  private async updatePricesBatch(fromId: string | null, batchSize: number): Promise<string | null> {
+  private async updatePricesBatch(
+    fromId: string | null,
+    batchSize: number
+  ): Promise<string | null> {
     const findOptions: FindManyOptions<TokenPartial> = {
       select: [...TokenFields],
       order: { id: "ASC" },
       take: batchSize,
-    }
+    };
     if (fromId != null) {
-      findOptions.where = { id: MoreThan(fromId) }
+      findOptions.where = { id: MoreThan(fromId) };
     }
     const tokens = await this.tokenRepository.find(findOptions);
     this.logger.log(`Updating prices for ${tokens.length} tokens...`);
-    
-    let updatedTokens = await Promise.all(tokens.map(token => this.updateTokenPrice(token)));
+
+    let updatedTokens = await Promise.all(
+      tokens.map((token) => this.updateTokenPrice(token))
+    );
 
     // keep only updated tokens
-    updatedTokens = updatedTokens.filter(token => token);
-    await this.tokenRepository.save(tokens, {
+    updatedTokens = updatedTokens.filter((token) => token);
+    await this.tokenRepository.save(updatedTokens as TokenPartial[], {
       reload: false,
     });
 
     return tokens.length >= batchSize ? tokens[tokens.length - 1].id : null;
   }
 
-  private async updateTokenPrice(token: TokenPartial): Promise<TokenPartial | null> {
+  private async updateTokenPrice(
+    token: TokenPartial
+  ): Promise<TokenPartial | null> {
     try {
       const oldPrice = token.price;
       const newPrice = await this.priceService.getRandomPriceForToken({
@@ -101,32 +109,38 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
         address: token.address,
         chainId: token.chainId,
       });
-      
+
       if (oldPrice !== newPrice) {
         // use same timestamp in kafka message and database
-        const now = new Date(); 
+        const now = new Date();
 
         // Create message for Kafka using Zod helper function
         const message = createTokenPriceUpdateMessage({
           tokenId: token.id,
-          symbol: token.symbol || 'UNKNOWN',
+          symbol: token.symbol ?? "UNKNOWN",
           oldPrice,
           newPrice,
           timestamp: now,
         });
-        
+
         await this.kafkaProducer.sendPriceUpdateMessage(message);
-        
+
         // Update token in database
         token.price = newPrice;
         token.lastPriceUpdate = now;
-        
-        this.logger.log(`Updated price for ${token.symbol}: ${oldPrice} -> ${newPrice}`);
+
+        this.logger.log(
+          `Updated price for ${token.symbol}: ${oldPrice} -> ${newPrice}`
+        );
 
         return token;
       }
-    } catch (error: any) {
-      this.logger.error(`Error updating price for token ${token.id}: ${error?.message}`);      
+    } catch (error) {
+      const { message, stack } = error instanceof Error ? error : ({} as Error);
+      this.logger.error(
+        `Error updating price for token ${token.id}: ${message || error}`,
+        stack
+      );
     }
 
     return null;
@@ -134,18 +148,18 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
 
   async stop(): Promise<void> {
     if (!this.isRunning) {
-      this.logger.warn('Price update service is not running');
+      this.logger.warn("Price update service is not running");
       return;
     }
- 
-    this.logger.log('Stopping price update service');
+
+    this.logger.log("Stopping price update service");
 
     this.isRunning = false;
     clearTimeout(this.timer);
 
     await this.updatingPrices;
 
-    this.logger.log('Price update service stopped');
+    this.logger.log("Price update service stopped");
   }
 
   async onModuleDestroy(): Promise<void> {

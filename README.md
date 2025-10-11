@@ -7,12 +7,15 @@ This repository contains a Node.js challenge task implementing a Token Price Ser
 The repository is organized as follows:
 
 - **src/**: The main project directory containing:
+  - **config/**: Configuration factories
   - **data/**: Database context and seeder
-  - **kafka/**: Kafka producer service
+  - **modules/app/**: The root App module
+  - **modules/kafka/**: Kafka producer module
   - **migrations/**: Database migrations
   - **models/**: Token and message models
-  - **services/**: Price update and mock services
+  - **modules/price/**: Price update and mock services
   - **test/**: Integration tests
+  - **utils**: Reusable helper methods
 
 ## Technology Stack
 

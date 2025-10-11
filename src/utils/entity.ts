@@ -4,5 +4,5 @@ export const columnNumericTransformer = {
   },
   from: (data: string) => {
     return parseFloat(data);
-  }
-}
+  },
+};

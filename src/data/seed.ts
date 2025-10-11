@@ -1,14 +1,13 @@
-import { AppDataSource } from './data-source';
-import { TokenSeeder } from './token.seeder';
-import { Token } from '../models/token.entity';
-import { getPriceConfig } from '../config/price.config';
-
+import { AppDataSource } from "./data-source";
+import { TokenSeeder } from "./token.seeder";
+import { Token } from "../models/token.entity";
+import { getPriceConfig } from "../config/price.config";
 
 async function seed() {
   try {
     // Initialize the data source
     await AppDataSource.initialize();
-    console.log('Data source has been initialized');
+    console.log("Data source has been initialized");
 
     // Create token seeder
     const tokenRepository = AppDataSource.getRepository(Token);
@@ -17,13 +16,13 @@ async function seed() {
 
     // Seed data
     await tokenSeeder.seed(10000);
-    console.log('Database seeded successfully');
+    console.log("Database seeded successfully");
 
     // Close the connection
     await AppDataSource.destroy();
-    console.log('Data source has been closed');
+    console.log("Data source has been closed");
   } catch (error) {
-    console.error('Error during seeding process:', error);
+    console.error("Error during seeding process:", error);
     process.exit(1);
   }
 }
@@ -31,10 +30,10 @@ async function seed() {
 // Run the seeder
 seed()
   .then(() => {
-    console.log('Seeding completed successfully');
+    console.log("Seeding completed successfully");
     process.exit(0);
   })
   .catch((error) => {
-    console.error('Failed to seed database:', error);
+    console.error("Failed to seed database:", error);
     process.exit(1);
   });

@@ -167,3 +167,19 @@ Changes details:
   * used precalculated port in kafka container config (same for host and container)
   * made `kafkaConsumer` consume messages in the test
   * compared consumed message with database entity in the test
+
+1.6.2
+=====
+
+Finishing touches: stricter compiler config, eslint, readme changes, uniform errors handling
+
+- `tsconfig.json`
+  added more strict compiler options
+
+- `.eslintrc.js`
+  eslint dependencies are already present in the project, so only config file is needed 
+
+- other files
+  changes to satisfy compiler and lint rules
+
+
