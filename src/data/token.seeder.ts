@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from '../models/token.entity';
 import { validateToken, TokenData } from '../models/token.schema';
 import { getRandomAddress, getRandomUuid, getRandomString, getRandomInt, getRandomFloat } from '../utils/random';
+import priceConfig, { PriceConfig } from '../config/price.config';
 
 const CHAINS = [
   { name: 'Ethereum', id: getRandomUuid() },
@@ -16,6 +17,8 @@ export class TokenSeeder {
   private readonly logger = new Logger(TokenSeeder.name);
 
   constructor(
+    @Inject(priceConfig.KEY)
+    private config: PriceConfig,
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,
   ) {}
@@ -65,7 +68,7 @@ export class TokenSeeder {
       lastUpdateAuthor: 'Seeder',
       priority: getRandomInt(1, 10),
       timestamp: new Date(),
-      price: getRandomFloat(100000),
+      price: getRandomFloat(this.config.maxPrice),
       lastPriceUpdate: new Date(),
       
       chain_DeId,

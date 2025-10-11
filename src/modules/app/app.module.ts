@@ -1,27 +1,29 @@
-import { Module, OnModuleInit } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { Module, OnApplicationBootstrap } from '@nestjs/common';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { PriceModule } from '../price/price.module';
 import { Token } from '../../models/token.entity';
 import { TokenPriceUpdateService } from '../price/token-price-update.service';
 import { TokenSeeder } from '../../data/token.seeder';
+import databaseConfig from '../../config/database.config';
+import kafkaConfig from '../../config/kafka.config';
+import priceConfig from '../../config/price.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
+      load: [
+        databaseConfig,
+        kafkaConfig,
+        priceConfig,
+      ],
       isGlobal: true,
+      cache: true,
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'postgres',
-      database: 'tokens',
-      entities: [Token],
-      migrations: [__dirname + '/../../migrations/[0-9]*.{js,ts}'],
-      migrationsRun: true, // Run migrations automatically
-      synchronize: false, // Disabled when using migrations
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],   
+      inject: [databaseConfig.KEY],
+      useFactory: (dbConfig: TypeOrmModuleOptions) => dbConfig
     }),
     TypeOrmModule.forFeature([Token]),
     PriceModule,
@@ -30,13 +32,13 @@ import { TokenSeeder } from '../../data/token.seeder';
     TokenSeeder,
   ],
 })
-export class AppModule implements OnModuleInit {
+export class AppModule implements OnApplicationBootstrap {
   constructor(
     private readonly tokenSeeder: TokenSeeder,
     private readonly tokenPriceUpdateService: TokenPriceUpdateService,
   ) {}
 
-  async onModuleInit() {
+  async onApplicationBootstrap() {
     try {
       // Seed initial data
       await this.tokenSeeder.seed(10000);

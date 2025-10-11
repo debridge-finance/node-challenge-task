@@ -1,10 +1,11 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Inject, Logger, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, FindManyOptions } from 'typeorm';
 import { Token } from '../../models/token.entity';
 import { MockPriceService } from './mock-price.service';
 import { KafkaProducerService } from '../kafka/kafka-producer.service';
 import { createTokenPriceUpdateMessage } from '../../models/token-price-update-message';
+import priceConfig, { PriceConfig } from '../../config/price.config';
 
 const TokenFields = [
   'id',
@@ -21,11 +22,12 @@ type TokenPartial = Pick<Token, (typeof TokenFields)[number]>;
 export class TokenPriceUpdateService implements OnModuleDestroy {
   private readonly logger = new Logger(TokenPriceUpdateService.name);
   private timer: NodeJS.Timeout;
-  private readonly updateIntervalSeconds: number = 5;
   private isRunning: boolean = false;
   private updatingPrices?: Promise<void>;
 
   constructor(
+    @Inject(priceConfig.KEY)
+    private config: PriceConfig,
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<TokenPartial>,
     private readonly priceService: MockPriceService,
@@ -39,8 +41,8 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     }
 
     this.isRunning = true;
-    this.logger.log(`Starting price update service (interval: ${this.updateIntervalSeconds} seconds)...`);
-
+    this.logger.log(`Starting price update service (timeout: ${this.config.updateTimeoutMs} ms, batch size: ${this.config.batchSize})...`);
+      
     // Trigger an initial update immediately
     this.updatingPrices = this.updatePrices();
   }
@@ -54,7 +56,7 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
       let startTokenId: string | null = null;
 
       do {
-        startTokenId = await this.updatePricesBatch(startTokenId, 1000);
+        startTokenId = await this.updatePricesBatch(startTokenId, this.config.batchSize);
       } while(this.isRunning && startTokenId != null)
     } catch (error: any) {
       this.logger.error(`Error updating prices: ${error?.message}`, error?.stack);      
@@ -63,7 +65,7 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
       if (this.isRunning) {
         this.timer = setTimeout(() => {
           this.updatingPrices = this.updatePrices();
-        }, this.updateIntervalSeconds * 1000)
+        }, this.config.updateTimeoutMs)
       }
     }
   }

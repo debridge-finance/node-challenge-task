@@ -110,8 +110,41 @@ More performance improvements: don't load unused columns from database. Also the
 
 Bugfix related to the saved data: previously prices were saved as integer numbers in database. Actual prices also contain fractional part. Also update dates in DB and Kafka were different. There is fix for both problems.
 
+Changes details:
 
+- `1684654321000-InitialMigration.ts`, `token.entity.ts`
+  Change type of database field to float8 (same float as js number type)
 
+- `token-price-update.service.ts`
+  Used same update date for DB entity and kafka message
 
+1.6.0
+=====
 
+Various settings are hardcoded now in different files. It's time to put all them all into a single folder and make configurable with env variables.
+
+- `config/database.config.ts`
+  Config of typeorm datasource
+
+- `config/kafka.config.ts`
+  Config of kafka
+
+- `config/price.config.ts`
+  Config of price module
+
+- `.env.example`
+  Example of `.env` file content
+
+- `app.module.ts`
+  * passed custom configs to `ConfigModule`
+  * applied config for `TypeOrmModule`
+  * changed onModuleInit to onApplicationBootstrap because it is starting of main app functionality
+  
+- `token-price-update.service.ts`, `mock-price.service.ts`, `token.seeder.ts`
+  Injected configs
+
+- `kafka-producer.service.ts`
+  * Injected configs
+  * Moved initialization from constructor to onModuleInit for better loading order tracking
+  * explicit `createPartitioner` parameter was passed to `kafka.producer` in order to mute warning logged
 

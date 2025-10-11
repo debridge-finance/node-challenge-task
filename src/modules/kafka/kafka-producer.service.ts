@@ -1,29 +1,29 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { Kafka, Producer } from 'kafkajs';
+import { Injectable, Inject, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Kafka, KafkaConfig, Producer, Partitioners } from 'kafkajs';
 import { TokenPriceUpdateMessage, tokenPriceUpdateMessageSchema } from '../../models/token-price-update-message';
+import kafkaConfig from '../../config/kafka.config';
 
 @Injectable()
-export class KafkaProducerService implements OnModuleDestroy {
+export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
+  public static readonly topic: string = 'token-price-updates';
   private readonly logger = new Logger(KafkaProducerService.name);
   private readonly producer: Producer;
-  private readonly topic: string = 'token-price-updates';
   
-  constructor() {
-    const kafka = new Kafka({
-      clientId: 'token-price-service',
-      brokers: ['localhost:9092'],
-    });
+  constructor(
+    @Inject(kafkaConfig.KEY)
+    kafkaConfig: KafkaConfig,
+  ) {
+    const kafka = new Kafka(kafkaConfig);
     
-    this.producer = kafka.producer();
-    this.connect();
+    this.producer = kafka.producer({ createPartitioner: Partitioners.DefaultPartitioner });
   }
-  
-  private async connect(): Promise<void> {
+
+  async onModuleInit(): Promise<void> {
     await this.producer.connect();
     this.logger.log('Connected to Kafka');
   }
-  
-  async sendPriceUpdateMessage(message: TokenPriceUpdateMessage): Promise<void> {
+
+  async sendPriceUpdateMessage(message: TokenPriceUpdateMessage): Promise<boolean> {
     try {
       // Validate the message with Zod schema      
       tokenPriceUpdateMessageSchema.parse(message);
@@ -31,7 +31,7 @@ export class KafkaProducerService implements OnModuleDestroy {
       const value = JSON.stringify(message);
       
       await this.producer.send({
-        topic: this.topic,
+        topic: KafkaProducerService.topic,
         messages: [
           { 
             key: message.tokenId, 
@@ -41,9 +41,11 @@ export class KafkaProducerService implements OnModuleDestroy {
       });
       
       this.logger.log(`Sent message to Kafka: ${value}`);
-      return;
-    } catch (error) {
-      this.logger.error(`Error sending message: ${error.message}`);      
+
+      return true;
+    } catch (error: any) {
+      this.logger.error(`Error sending message: ${error?.message}`, error?.stack);
+      return false;
     }
   }
   
@@ -51,11 +53,9 @@ export class KafkaProducerService implements OnModuleDestroy {
     this.logger.log('Disconnecting from Kafka');
     try {
       await this.producer.disconnect();
-      // artifical delay demonstrating destroy order problem
-      await new Promise(resolve => setTimeout(resolve, 1000));
       this.logger.log('Disconnected from Kafka');
-    } catch (error) {
-      this.logger.error('Error disconnecting from Kafka', error.stack);
+    } catch (error: any) {
+      this.logger.error(`Error disconnecting from Kafka: ${error?.message}`, error.stack);
     }
   }
 }
