@@ -105,3 +105,13 @@ More performance improvements: don't load unused columns from database. Also the
   Removed duplicate chain_Id field
 
 
+1.5.0
+=====
+
+Bugfix related to the saved data: previously prices were saved as integer numbers in database. Actual prices also contain fractional part. Also update dates in DB and Kafka were different. There is fix for both problems.
+
+
+
+
+
+

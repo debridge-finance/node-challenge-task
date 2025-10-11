@@ -36,6 +36,16 @@ export class Token {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   timestamp: Date;
 
+  @Column({ 
+    type: 'float8', 
+    default: 0,
+    transformer: columnNumericTransformer,
+  })
+  price: number;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  lastPriceUpdate: Date;
+
   // Denormalized chain data (intentional anti-pattern)
   @Column({ name: 'chain_deid', type: 'decimal' })
   chain_DeId: number;
@@ -61,16 +71,4 @@ export class Token {
 
   @Column({ name: 'logo_thumbrelativepath' })
   logo_ThumbRelativePath: string;
-
-  @Column({ 
-    type: 'decimal', 
-    precision: 28, 
-    scale: 0, 
-    default: 0,
-    transformer: columnNumericTransformer,
-  })
-  price: number;
-
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  lastPriceUpdate: Date;
 }

@@ -101,20 +101,23 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
       });
       
       if (oldPrice !== newPrice) {
+        // use same timestamp in kafka message and database
+        const now = new Date(); 
+
         // Create message for Kafka using Zod helper function
         const message = createTokenPriceUpdateMessage({
           tokenId: token.id,
           symbol: token.symbol || 'UNKNOWN',
           oldPrice,
           newPrice,
-          // timestamp will be set to current date by default if not provided
+          timestamp: now,
         });
         
         await this.kafkaProducer.sendPriceUpdateMessage(message);
         
         // Update token in database
         token.price = newPrice;
-        token.lastPriceUpdate = new Date();
+        token.lastPriceUpdate = now;
         
         this.logger.log(`Updated price for ${token.symbol}: ${oldPrice} -> ${newPrice}`);
 

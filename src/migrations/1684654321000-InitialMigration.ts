@@ -17,6 +17,8 @@ export class InitialMigration1684654321000 implements MigrationInterface {
                 "lastUpdateAuthor" character varying,
                 "priority" integer NOT NULL DEFAULT '0',
                 "timestamp" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "price" float8 NOT NULL DEFAULT '0',
+                "lastPriceUpdate" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 "chain_deid" numeric NOT NULL,
                 "chain_name" character varying NOT NULL,
                 "chain_isenabled" boolean NOT NULL DEFAULT true,
@@ -25,8 +27,6 @@ export class InitialMigration1684654321000 implements MigrationInterface {
                 "logo_bigrelativepath" character varying NOT NULL,
                 "logo_smallrelativepath" character varying NOT NULL,
                 "logo_thumbrelativepath" character varying NOT NULL,
-                "price" numeric(28,0) NOT NULL DEFAULT '0',
-                "lastPriceUpdate" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 CONSTRAINT "PK_tokens" PRIMARY KEY ("id")
             )
         `);
