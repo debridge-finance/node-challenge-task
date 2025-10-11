@@ -182,4 +182,18 @@ Finishing touches: stricter compiler config, eslint, readme changes, uniform err
 - other files
   changes to satisfy compiler and lint rules
 
+1.6.3
+=====
 
+CI: Docker image build with GitHub Actions
+
+Changes details:
+
+- `Dockerfile`
+  the dockerfile for two-steps building image
+
+- `.github/workflows/ci.yml`
+  configuration of GitHub Actions
+
+- `.dockerignore`
+  files to ignore on docker build

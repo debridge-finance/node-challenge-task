@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  token-price-service:
+    build: .
+    container_name: token-price-service
+    environment:
+      DB_HOST: postgres
+      KAFKA_BROKERS: kafka:9092
+
+  kafka:
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+
