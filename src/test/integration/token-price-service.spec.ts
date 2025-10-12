@@ -4,11 +4,13 @@ import { GenericContainer, StartedTestContainer } from 'testcontainers';
 import { Kafka, Consumer, KafkaMessage } from 'kafkajs';
 import { Token } from '../../models/token.entity';
 import { TokenPriceUpdateService } from '../../services/token-price-update.service';
-import { MockPriceService } from '../../services/mock-price.service';
+import { MockPriceProvider } from '../../services/mock-price.provider';
 import { KafkaProducerService } from '../../kafka/kafka-producer.service';
 import { TokenPriceUpdateMessage } from '../../models/token-price-update-message';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { ScheduleModule, SchedulerRegistry } from '@nestjs/schedule';
+import { ConfigModule } from '@nestjs/config';
 
 describe('TokenPriceService Integration Tests', () => {
   let postgresContainer: StartedTestContainer;
@@ -61,7 +63,7 @@ describe('TokenPriceService Integration Tests', () => {
         .start();
 
       // Wait for Zookeeper to start
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       // Start Kafka container
       kafkaContainer = await new GenericContainer('confluentinc/cp-kafka:7.3.0')
@@ -82,7 +84,7 @@ describe('TokenPriceService Integration Tests', () => {
       const mappedKafkaPort = kafkaContainer.getMappedPort(9092);
 
       // Wait for Kafka to be fully ready
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // Setup Kafka consumer
       const kafka = new Kafka({
@@ -97,6 +99,8 @@ describe('TokenPriceService Integration Tests', () => {
       // Create NestJS test module
       moduleRef = await Test.createTestingModule({
         imports: [
+          ConfigModule.forRoot({ isGlobal: true }),
+          ScheduleModule.forRoot(),
           TypeOrmModule.forRoot({
             type: 'postgres',
             host: postgresHost,
@@ -111,7 +115,7 @@ describe('TokenPriceService Integration Tests', () => {
         ],
         providers: [
           TokenPriceUpdateService,
-          MockPriceService,
+          MockPriceProvider,
           {
             provide: KafkaProducerService,
             useValue: {
@@ -125,6 +129,9 @@ describe('TokenPriceService Integration Tests', () => {
 
       tokenRepository = moduleRef.get<Repository<Token>>(getRepositoryToken(Token));
       tokenPriceUpdateService = moduleRef.get<TokenPriceUpdateService>(TokenPriceUpdateService);
+
+      // Make sure the scheduler registry is available
+      moduleRef.get<SchedulerRegistry>(SchedulerRegistry);
     } catch (error) {
       console.error('Error during test setup:', error);
       throw error;
@@ -154,46 +161,32 @@ describe('TokenPriceService Integration Tests', () => {
   }, 30000);
 
   it('should update token price and send Kafka message', async () => {
-    // Create test token
     const token = new Token();
     token.address = Buffer.from([0x01, 0x02, 0x03]);
     token.symbol = 'TEST';
     token.name = 'Test Token';
     token.decimals = 18;
     token.isNative = false;
-    token.chainId = '11111111-1111-1111-1111-111111111111';
     token.isProtected = false;
     token.priority = 1;
     token.timestamp = new Date();
-    token.chain_Id = '11111111-1111-1111-1111-111111111111';
-    token.chain_DeId = 1;
-    token.chain_Name = 'Test Chain';
-    token.chain_IsEnabled = true;
-    token.logo_Id = '22222222-2222-2222-2222-222222222222';
-    token.logo_TokenId = '33333333-3333-3333-3333-333333333333';
-    token.logo_BigRelativePath = '/test.png';
-    token.logo_SmallRelativePath = '/test_small.png';
-    token.logo_ThumbRelativePath = '/test_thumb.png';
-    token.price = 100;
+    token.chainId = '11111111-1111-1111-1111-111111111111';
+    token.chainName = 'Test Chain';
+    token.chainIsEnabled = true;
+    token.logoId = '22222222-2222-2222-2222-222222222222';
+    token.logoTokenId = '33333333-3333-3333-3333-333333333333';
+    token.logoBigRelativePath = '/test.png';
+    token.logoSmallRelativePath = '/test_small.png';
+    token.logoThumbRelativePath = '/test_thumb.png';
+    token.price = 1;
     token.lastPriceUpdate = new Date();
 
     await tokenRepository.save(token);
 
-    // Start price update service
-    tokenPriceUpdateService.start();
+    await tokenPriceUpdateService.updatePrices();
 
-    // Wait for price updates to occur
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    // Stop the service
-    tokenPriceUpdateService.stop();
-
-    // Check if token price was updated in the database
     const updatedToken = await tokenRepository.findOne({ where: { id: token.id } });
     expect(updatedToken).toBeDefined();
     expect(updatedToken!.price).not.toEqual(100);
-
-    // Note: In a real test, we would also check for Kafka messages,
-    // but since we're mocking the KafkaProducerService, we can't do that here
   }, 10000);
 });

@@ -17,16 +17,13 @@ export class Token {
   @Column({ type: 'smallint', default: 0 })
   decimals: number;
 
-  @Column({ default: false })
+  @Column({ name: 'is_native', default: false })
   isNative: boolean;
 
-  @Column({ type: 'uuid' })
-  chainId: string;
-
-  @Column({ default: false })
+  @Column({ name: 'is_protected', default: false })
   isProtected: boolean;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ name: 'last_update_author', type: 'varchar', nullable: true })
   lastUpdateAuthor: string | null;
 
   @Column({ default: 0 })
@@ -35,38 +32,34 @@ export class Token {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   timestamp: Date;
 
-  // Denormalized chain data (intentional anti-pattern)
   @Column({ name: 'chain_id', type: 'uuid' })
-  chain_Id: string;
-
-  @Column({ name: 'chain_deid', type: 'integer' })
-  chain_DeId: number;
+  chainId: string;
 
   @Column({ name: 'chain_name' })
-  chain_Name: string;
+  chainName: string;
 
-  @Column({ name: 'chain_isenabled', default: true })
-  chain_IsEnabled: boolean;
+  @Column({ name: 'chain_is_enabled', default: true })
+  chainIsEnabled: boolean;
 
-  // Denormalized logo data (intentional anti-pattern)
+  // Denormalized logo data
   @Column({ name: 'logo_id', type: 'uuid' })
-  logo_Id: string;
+  logoId: string;
 
-  @Column({ name: 'logo_tokenid', type: 'uuid', nullable: true })
-  logo_TokenId: string | null;
+  @Column({ name: 'logo_token_id', type: 'uuid', nullable: true })
+  logoTokenId: string | null;
 
-  @Column({ name: 'logo_bigrelativepath' })
-  logo_BigRelativePath: string;
+  @Column({ name: 'logo_big_relative_path' })
+  logoBigRelativePath: string;
 
-  @Column({ name: 'logo_smallrelativepath' })
-  logo_SmallRelativePath: string;
+  @Column({ name: 'logo_small_relative_path' })
+  logoSmallRelativePath: string;
 
-  @Column({ name: 'logo_thumbrelativepath' })
-  logo_ThumbRelativePath: string;
+  @Column({ name: 'logo_thumb_relative_path' })
+  logoThumbRelativePath: string;
 
   @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
   price: number;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ name: 'last_price_update', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   lastPriceUpdate: Date;
 }

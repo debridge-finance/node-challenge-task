@@ -23,7 +23,6 @@ export class TokenSeeder {
 
     this.logger.log('Seeding initial data...');
 
-    // Define token data and validate with Zod schema
     const tokenData = [
       {
         address: Buffer.from([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09]),
@@ -31,21 +30,19 @@ export class TokenSeeder {
         name: 'Ethereum',
         decimals: 18,
         isNative: true,
-        chainId: '11111111-1111-1111-1111-111111111111',
         isProtected: true,
         lastUpdateAuthor: 'Seeder',
         priority: 1,
         timestamp: new Date(),
 
-        chain_Id: '11111111-1111-1111-1111-111111111111',
-        chain_DeId: 1,
-        chain_Name: 'Ethereum',
-        chain_IsEnabled: true,
-        logo_Id: this.generateUuid(),
-        logo_TokenId: this.generateUuid(),
-        logo_BigRelativePath: '/images/eth_big.png',
-        logo_SmallRelativePath: '/images/eth_small.png',
-        logo_ThumbRelativePath: '/images/eth_thumb.png',
+        chainId: '11111111-1111-1111-1111-111111111111',
+        chainName: 'Ethereum',
+        chainIsEnabled: true,
+        logoId: this.generateUuid(),
+        logoTokenId: this.generateUuid(),
+        logoBigRelativePath: '/images/eth_big.png',
+        logoSmallRelativePath: '/images/eth_small.png',
+        logoThumbRelativePath: '/images/eth_thumb.png',
         price: 300000,
         lastPriceUpdate: new Date(),
       },
@@ -55,22 +52,20 @@ export class TokenSeeder {
         name: 'Bitcoin',
         decimals: 8,
         isNative: true,
-        chainId: '22222222-2222-2222-2222-222222222222',
         isProtected: true,
         lastUpdateAuthor: 'Seeder',
         priority: 2,
         timestamp: new Date(),
 
-        chain_Id: '22222222-2222-2222-2222-222222222222',
-        chain_DeId: 2,
-        chain_Name: 'Bitcoin',
-        chain_IsEnabled: true,
+        chainId: '22222222-2222-2222-2222-222222222222',
+        chainName: 'Bitcoin',
+        chainIsEnabled: true,
 
-        logo_Id: this.generateUuid(),
-        logo_TokenId: this.generateUuid(),
-        logo_BigRelativePath: '/images/btc_big.png',
-        logo_SmallRelativePath: '/images/btc_small.png',
-        logo_ThumbRelativePath: '/images/btc_thumb.png',
+        logoId: this.generateUuid(),
+        logoTokenId: this.generateUuid(),
+        logoBigRelativePath: '/images/btc_big.png',
+        logoSmallRelativePath: '/images/btc_small.png',
+        logoThumbRelativePath: '/images/btc_thumb.png',
 
         price: 4500000,
         lastPriceUpdate: new Date(),
@@ -81,22 +76,20 @@ export class TokenSeeder {
         name: 'Solana',
         decimals: 9,
         isNative: true,
-        chainId: '33333333-3333-3333-3333-333333333333',
         isProtected: true,
         lastUpdateAuthor: 'Seeder',
         priority: 3,
         timestamp: new Date(),
 
-        chain_Id: '33333333-3333-3333-3333-333333333333',
-        chain_DeId: 3,
-        chain_Name: 'Solana',
-        chain_IsEnabled: true,
+        chainId: '33333333-3333-3333-3333-333333333333',
+        chainName: 'Solana',
+        chainIsEnabled: true,
 
-        logo_Id: this.generateUuid(),
-        logo_TokenId: this.generateUuid(),
-        logo_BigRelativePath: '/images/sol_big.png',
-        logo_SmallRelativePath: '/images/sol_small.png',
-        logo_ThumbRelativePath: '/images/sol_thumb.png',
+        logoId: this.generateUuid(),
+        logoTokenId: this.generateUuid(),
+        logoBigRelativePath: '/images/sol_big.png',
+        logoSmallRelativePath: '/images/sol_small.png',
+        logoThumbRelativePath: '/images/sol_thumb.png',
 
         price: 15000,
         lastPriceUpdate: new Date(),
@@ -104,7 +97,6 @@ export class TokenSeeder {
     ];
 
     try {
-      // Validate each token with Zod schema before saving
       const validatedTokens = tokenData.map((data) => validateToken(data));
 
       await this.tokenRepository.save(validatedTokens);

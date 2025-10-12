@@ -8,24 +8,22 @@ export const tokenSchema = z.object({
   name: z.string().nullable().optional(),
   decimals: z.number().int().min(0).max(32767).default(0), // smallint range
   isNative: z.boolean().default(false),
-  chainId: z.string().uuid(),
   isProtected: z.boolean().default(false),
   lastUpdateAuthor: z.string().nullable().optional(),
   priority: z.number().int().default(0),
   timestamp: z.date().default(() => new Date()),
 
   // Denormalized chain data
-  chain_Id: z.string().uuid(),
-  chain_DeId: z.number(),
-  chain_Name: z.string(),
-  chain_IsEnabled: z.boolean().default(true),
+  chainId: z.string().uuid(),
+  chainName: z.string(),
+  chainIsEnabled: z.boolean().default(true),
 
   // Denormalized logo data
-  logo_Id: z.string().uuid(),
-  logo_TokenId: z.string().uuid().nullable().optional(),
-  logo_BigRelativePath: z.string(),
-  logo_SmallRelativePath: z.string(),
-  logo_ThumbRelativePath: z.string(),
+  logoId: z.string().uuid(),
+  logoTokenId: z.string().uuid().nullable().optional(),
+  logoBigRelativePath: z.string(),
+  logoSmallRelativePath: z.string(),
+  logoThumbRelativePath: z.string(),
 
   price: z.number().nonnegative().default(0),
   lastPriceUpdate: z.date().default(() => new Date()),

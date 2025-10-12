@@ -1,17 +1,21 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { Token } from './models/token.entity';
 import { TokenPriceUpdateService } from './services/token-price-update.service';
-import { MockPriceService } from './services/mock-price.service';
+import { MockPriceProvider } from './services/mock-price.provider';
 import { KafkaProducerService } from './kafka/kafka-producer.service';
-import { TokenSeeder } from './data/token.seeder';
+import { SchedulerService } from './services/scheduler.service';
+import { HealthController } from './health.controller';
+import { TokenSeeder } from './services/token.seeder';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
@@ -27,22 +31,25 @@ import { TokenSeeder } from './data/token.seeder';
     }),
     TypeOrmModule.forFeature([Token]),
   ],
-  controllers: [],
-  providers: [TokenPriceUpdateService, MockPriceService, KafkaProducerService, TokenSeeder],
+  controllers: [HealthController],
+  providers: [
+    TokenPriceUpdateService,
+    MockPriceProvider,
+    KafkaProducerService,
+    TokenSeeder,
+    SchedulerService,
+  ],
 })
 export class AppModule implements OnModuleInit {
   constructor(
     private readonly tokenSeeder: TokenSeeder,
-    private readonly tokenPriceUpdateService: TokenPriceUpdateService,
+    private readonly scheduler: SchedulerService,
   ) {}
 
   async onModuleInit() {
     try {
-      // Seed initial data
       await this.tokenSeeder.seed();
-
-      // Start price update service
-      this.tokenPriceUpdateService.start();
+      await this.scheduler.handleCron();
     } catch (error) {
       console.error('Failed to initialize application:', error);
     }
