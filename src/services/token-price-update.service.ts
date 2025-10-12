@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from '../models/token.entity';
 import { MockPriceProvider } from './mock-price.provider';
-import { KafkaProducerService } from '../kafka/kafka-producer.service';
+import { ProducerService } from './producer.service';
 import { createTokenPriceUpdateMessage } from '../models/token-price-update-message';
 
 @Injectable()
@@ -14,7 +14,7 @@ export class TokenPriceUpdateService {
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,
     private readonly priceService: MockPriceProvider,
-    private readonly kafkaProducer: KafkaProducerService,
+    private readonly kafkaProducer: ProducerService,
   ) {}
 
   public async updatePrices(): Promise<void> {

@@ -5,7 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { Token } from './models/token.entity';
 import { TokenPriceUpdateService } from './services/token-price-update.service';
 import { MockPriceProvider } from './services/mock-price.provider';
-import { KafkaProducerService } from './kafka/kafka-producer.service';
+import { ProducerService } from './services/producer.service';
 import { SchedulerService } from './services/scheduler.service';
 import { HealthController } from './health.controller';
 import { TokenSeeder } from './services/token.seeder';
@@ -35,7 +35,7 @@ import { TokenSeeder } from './services/token.seeder';
   providers: [
     TokenPriceUpdateService,
     MockPriceProvider,
-    KafkaProducerService,
+    ProducerService,
     TokenSeeder,
     SchedulerService,
   ],
