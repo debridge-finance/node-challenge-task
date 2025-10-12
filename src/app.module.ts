@@ -2,6 +2,7 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ClientsModule, Transport } from '@nestjs/microservices';
 import { Token } from './models/token.entity';
 import { TokenPriceUpdateService } from './services/token-price-update.service';
 import { MockPriceProvider } from './services/mock-price.provider';
@@ -16,6 +17,23 @@ import { TokenSeeder } from './services/token.seeder';
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),
+    ClientsModule.register([
+      {
+        name: 'TOKEN_PRICE_SERVICE',
+        transport: Transport.KAFKA,
+        options: {
+          client: {
+            clientId: 'token-price-service',
+            brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
+          },
+          consumer: { groupId: 'token-price-consumer' },
+          producer: { allowAutoTopicCreation: true },
+          subscribe: {
+            fromBeginning: true,
+          },
+        },
+      },
+    ]),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',

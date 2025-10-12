@@ -1,61 +1,67 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { Kafka, Producer } from 'kafkajs';
+import { Injectable, Logger, OnModuleDestroy, Inject, OnModuleInit } from '@nestjs/common';
+import { ClientProxy, KafkaRetriableException } from '@nestjs/microservices';
 import {
   TokenPriceUpdateMessage,
   tokenPriceUpdateMessageSchema,
 } from '../models/token-price-update-message';
 
 @Injectable()
-export class ProducerService implements OnModuleDestroy {
+export class ProducerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ProducerService.name);
-  private readonly producer: Producer;
-  private readonly topic: string = 'token-price-updates';
 
-  constructor() {
-    const kafka = new Kafka({
-      clientId: 'token-price-service',
-      brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
-    });
+  constructor(@Inject('TOKEN_PRICE_SERVICE') private readonly client: ClientProxy) {}
 
-    this.producer = kafka.producer();
-    this.connect();
-  }
-
-  private async connect(): Promise<void> {
-    await this.producer.connect();
-    this.logger.log('Connected to Kafka');
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.client.connect();
+      this.logger.log('Connected to microservice transport');
+    } catch (error) {
+      this.logger.error(`Failed to connect to microservice transport: ${error.message}`);
+    }
   }
 
   async sendPriceUpdateMessage(message: TokenPriceUpdateMessage): Promise<void> {
     try {
-      // Validate the message with Zod schema
       tokenPriceUpdateMessageSchema.parse(message);
 
-      const value = JSON.stringify(message);
+      this.logger.debug(`Attempting to send message for token ${message.tokenId}`);
 
-      this.producer.send({
-        topic: this.topic,
-        messages: [
-          {
-            key: message.tokenId,
-            value,
-          },
-        ],
+      this.client.emit('token-price-updates', message).subscribe({
+        next: () => {
+          this.logger.log(
+            `Successfully sent price update for token ${message.tokenId}: ${message.symbol} price changed from ${message.oldPrice} to ${message.newPrice}`,
+          );
+        },
+        error: (err) => {
+          if (err instanceof KafkaRetriableException) {
+            this.logger.warn(
+              `Retriable error sending message: ${err.message}. Will retry automatically.`,
+            );
+          } else {
+            this.logger.error(`Error sending message: ${err.message}`, err.stack);
+          }
+        },
+        complete: () => {
+          this.logger.debug(`Message emission completed for token ${message.tokenId}`);
+        },
       });
 
-      this.logger.log(`Sent message to Kafka: ${value}`);
       return;
     } catch (error) {
-      this.logger.error(`Error sending message: ${error.message}`);
+      this.logger.error(`Error processing message: ${error.message}`, error.stack);
+      throw error;
     }
   }
 
   async onModuleDestroy(): Promise<void> {
     try {
-      await this.producer.disconnect();
-      this.logger.log('Disconnected from Kafka');
+      this.logger.log('Shutting down producer service...');
+      await this.client.close();
+      this.logger.log('Successfully disconnected from microservice transport');
     } catch (error) {
-      this.logger.error('Error disconnecting from Kafka', error.stack);
+      this.logger.error('Error disconnecting from microservice transport', error.stack);
+    } finally {
+      this.logger.log('Producer service shutdown complete');
     }
   }
 }
