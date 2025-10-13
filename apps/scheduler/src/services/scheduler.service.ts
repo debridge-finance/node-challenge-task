@@ -1,19 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { TokenPriceUpdateService } from './token-price-update.service';
+import { BatchProducerService } from './batch-producer.service';
 
 @Injectable()
 export class SchedulerService {
   private readonly logger = new Logger(SchedulerService.name);
 
-  constructor(private readonly tokenPriceService: TokenPriceUpdateService) {}
+  constructor(private readonly batchProducerService: BatchProducerService) {}
 
   @Cron(CronExpression.EVERY_5_SECONDS)
   async handleCron() {
     try {
-      return this.tokenPriceService.updatePrices();
+      this.logger.log('Sending token batch...');
+      return this.batchProducerService.sendTokenBatch();
     } catch (error) {
-      this.logger.error(`Error updating prices: ${error.message}`);
+      this.logger.error(`Error sending token batch: ${error.message}`);
     }
   }
 }

@@ -1,12 +1,12 @@
 import { z } from 'zod';
+import { Token } from './token.entity';
 
-// Zod schema for token validation
 export const tokenSchema = z.object({
-  id: z.string().uuid().optional(), // Optional for new tokens
+  id: z.string().uuid().optional(),
   address: z.instanceof(Buffer),
   symbol: z.string().nullable().optional(),
   name: z.string().nullable().optional(),
-  decimals: z.number().int().min(0).max(32767).default(0), // smallint range
+  decimals: z.number().int().min(0).max(32767).default(0),
   isNative: z.boolean().default(false),
   isProtected: z.boolean().default(false),
   lastUpdateAuthor: z.string().nullable().optional(),
@@ -28,15 +28,18 @@ export const tokenSchema = z.object({
   price: z.number().nonnegative().default(0),
   lastPriceUpdate: z.date().default(() => new Date()),
 });
-// Type derived from the schema
+
 export type TokenData = z.infer<typeof tokenSchema>;
 
-// Helper function to validate token data
-export function validateToken(data: Partial<TokenData>): TokenData {
-  return tokenSchema.parse(data);
+export function validateToken(data: Partial<TokenData>): Token {
+  const validatedData = tokenSchema.parse(data);
+  const token = new Token();
+
+  Object.assign(token, validatedData);
+
+  return token;
 }
 
-// Helper function to validate partial token data (for updates)
 export function validatePartialToken(data: Partial<TokenData>): Partial<TokenData> {
   return tokenSchema.partial().parse(data);
 }

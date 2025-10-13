@@ -3,13 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { Token } from './models/token.entity';
-import { TokenPriceUpdateService } from './services/token-price-update.service';
-import { MockPriceProvider } from './services/mock-price.provider';
-import { ProducerService } from './services/producer.service';
 import { SchedulerService } from './services/scheduler.service';
-import { HealthController } from './health.controller';
+import { Token } from './models/token.entity';
 import { TokenSeeder } from './services/token.seeder';
+import { BatchProducerService } from './services/batch-producer.service';
+import { PriceUpdateConsumer } from './services/price-update-consumer.controller';
 
 @Module({
   imports: [
@@ -19,18 +17,14 @@ import { TokenSeeder } from './services/token.seeder';
     ScheduleModule.forRoot(),
     ClientsModule.register([
       {
-        name: 'TOKEN_PRICE_SERVICE',
+        name: 'TOKEN_BATCH_SERVICE',
         transport: Transport.KAFKA,
         options: {
           client: {
-            clientId: 'token-price-service',
+            clientId: 'token-scheduler-service',
             brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
           },
-          consumer: { groupId: 'token-price-consumer' },
           producer: { allowAutoTopicCreation: true },
-          subscribe: {
-            fromBeginning: true,
-          },
         },
       },
     ]),
@@ -42,23 +36,17 @@ import { TokenSeeder } from './services/token.seeder';
       password: process.env.DATABASE_PASSWORD || 'postgres',
       database: process.env.DATABASE_NAME || 'tokens',
       entities: [Token],
-      migrations: [__dirname + '/migrations/*.{js,ts}'],
-      migrationsRun: true, // Run migrations automatically
-      synchronize: false, // Disabled when using migrations
+      migrations: [`${__dirname}/migrations/**/*{.ts,.js}`],
+      migrationsRun: true,
+      synchronize: false,
       ssl: false,
     }),
     TypeOrmModule.forFeature([Token]),
   ],
-  controllers: [HealthController],
-  providers: [
-    TokenPriceUpdateService,
-    MockPriceProvider,
-    ProducerService,
-    TokenSeeder,
-    SchedulerService,
-  ],
+  controllers: [PriceUpdateConsumer],
+  providers: [SchedulerService, TokenSeeder, BatchProducerService],
 })
-export class AppModule implements OnModuleInit {
+export class SchedulerModule implements OnModuleInit {
   constructor(
     private readonly tokenSeeder: TokenSeeder,
     private readonly scheduler: SchedulerService,
