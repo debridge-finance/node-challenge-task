@@ -1,6 +1,8 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModuleAsyncOptions } from '@nestjs/typeorm';
 import { Token } from '../models/token.entity';
+import { Chain } from '../models/chain.entity';
+import { Logo } from '../models/logo.entity';
 
 export const getDatabaseConfig = (): TypeOrmModuleAsyncOptions => {
   return {
@@ -13,7 +15,7 @@ export const getDatabaseConfig = (): TypeOrmModuleAsyncOptions => {
       username: configService.get('DATABASE_USERNAME', 'postgres'),
       password: configService.get('DATABASE_PASSWORD', 'postgres'),
       database: configService.get('DATABASE_NAME', 'tokens'),
-      entities: [Token],
+      entities: [Token, Chain, Logo],
       migrations: [`${__dirname}/../migrations/**/*{.ts,.js}`],
       migrationsRun: true,
       synchronize: false,

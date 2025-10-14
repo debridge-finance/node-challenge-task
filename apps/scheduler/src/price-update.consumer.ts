@@ -1,8 +1,8 @@
 import { Controller, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Token } from '../models/token.entity';
-import { tokenPriceUpdateMessageSchema } from '../models/token-price-update-message';
+import { Token } from './models/token.entity';
+import { tokenPriceUpdateMessageSchema } from './models/token-price-update-message';
 import { MessagePattern } from '@nestjs/microservices';
 
 @Controller()

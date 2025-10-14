@@ -2,13 +2,13 @@ import { Logger, Controller } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { Feed } from '../models/feed.entity';
-import { tokenBatchMessageSchema } from '../models/token-batch-message';
-import { TokenProcessorService } from './token-processor.service';
+import { Feed } from './models/feed.entity';
+import { tokenBatchMessageSchema } from './models/token-batch-message';
+import { TokenProcessorService } from './services/token-processor.service';
 
 @Controller()
-export class Consumer {
-  private readonly logger = new Logger(Consumer.name);
+export class TokenBatchConsumer {
+  private readonly logger = new Logger(TokenBatchConsumer.name);
   private readonly instanceId = Math.random().toString(36).substring(2, 10);
 
   constructor(

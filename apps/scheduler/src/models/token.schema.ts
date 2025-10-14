@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { Token } from './token.entity';
+import { chainSchema } from './chain.schema';
+import { logoSchema } from './logo.schema';
 
 export const tokenSchema = z.object({
   id: z.string().uuid().optional(),
@@ -13,17 +15,11 @@ export const tokenSchema = z.object({
   priority: z.number().int().default(0),
   timestamp: z.date().default(() => new Date()),
 
-  // Denormalized chain data
   chainId: z.string().uuid(),
-  chainName: z.string(),
-  chainIsEnabled: z.boolean().default(true),
+  chain: chainSchema.optional(),
 
-  // Denormalized logo data
   logoId: z.string().uuid(),
-  logoTokenId: z.string().uuid().nullable().optional(),
-  logoBigRelativePath: z.string(),
-  logoSmallRelativePath: z.string(),
-  logoThumbRelativePath: z.string(),
+  logo: logoSchema.optional(),
 
   price: z.number().nonnegative().default(0),
   lastPriceUpdate: z.date().default(() => new Date()),

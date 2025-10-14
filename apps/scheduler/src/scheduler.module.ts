@@ -5,9 +5,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule } from '@nestjs/microservices';
 import { SchedulerService } from './services/scheduler.service';
 import { Token } from './models/token.entity';
+import { Chain } from './models/chain.entity';
+import { Logo } from './models/logo.entity';
 import { TokenSeeder } from './services/token.seeder';
 import { BatchProducerService } from './services/batch-producer.service';
-import { PriceUpdateConsumer } from './services/price-update-consumer.controller';
+import { PriceUpdateConsumer } from './price-update.consumer';
 import { getDatabaseConfig } from './config/database.config';
 import { getKafkaConfig } from './config/kafka.config';
 
@@ -19,7 +21,7 @@ import { getKafkaConfig } from './config/kafka.config';
     ScheduleModule.forRoot(),
     ClientsModule.registerAsync(getKafkaConfig()),
     TypeOrmModule.forRootAsync(getDatabaseConfig()),
-    TypeOrmModule.forFeature([Token]),
+    TypeOrmModule.forFeature([Token, Chain, Logo]),
   ],
   controllers: [PriceUpdateConsumer],
   providers: [SchedulerService, TokenSeeder, BatchProducerService],

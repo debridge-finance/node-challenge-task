@@ -1,4 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Chain } from './chain.entity';
+import { Logo } from './logo.entity';
 
 @Entity('tokens')
 export class Token {
@@ -35,27 +37,16 @@ export class Token {
   @Column({ name: 'chain_id', type: 'uuid' })
   chainId: string;
 
-  @Column({ name: 'chain_name' })
-  chainName: string;
+  @ManyToOne(() => Chain, (chain) => chain.tokens)
+  @JoinColumn({ name: 'chain_id' })
+  chain: Chain;
 
-  @Column({ name: 'chain_is_enabled', default: true })
-  chainIsEnabled: boolean;
-
-  // Denormalized logo data
   @Column({ name: 'logo_id', type: 'uuid' })
   logoId: string;
 
-  @Column({ name: 'logo_token_id', type: 'uuid', nullable: true })
-  logoTokenId: string | null;
-
-  @Column({ name: 'logo_big_relative_path' })
-  logoBigRelativePath: string;
-
-  @Column({ name: 'logo_small_relative_path' })
-  logoSmallRelativePath: string;
-
-  @Column({ name: 'logo_thumb_relative_path' })
-  logoThumbRelativePath: string;
+  @ManyToOne(() => Logo, (logo) => logo.tokens)
+  @JoinColumn({ name: 'logo_id' })
+  logo: Logo;
 
   @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
   price: number;
