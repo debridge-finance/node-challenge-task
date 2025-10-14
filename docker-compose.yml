@@ -21,8 +21,8 @@ services:
       - DATABASE_NAME=tokens
       - KAFKA_BROKERS=kafka:9093
       - PRICE_UPDATE_CRON=*/5 * * * * *
-      - PRICE_UPDATE_TIMEZONE=UTC
       - PRICE_UPDATE_ENABLED=true
+      - BATCH_SIZE=2
 
   updater:
     build:
@@ -44,8 +44,6 @@ services:
       - DATABASE_PASSWORD=postgres
       - DATABASE_NAME=tokens
       - KAFKA_BROKERS=kafka:9093
-      - PRICE_UPDATE_ENABLED=true
-      - KAFKA_CONSUMER_ALLOW_AUTO_TOPIC_CREATION=true
 
   postgres:
     image: postgres:15-alpine

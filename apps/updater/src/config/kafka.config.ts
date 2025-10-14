@@ -11,23 +11,26 @@ export const getKafkaConfig = (): ClientsModuleAsyncOptions => {
         transport: Transport.KAFKA,
         options: {
           client: {
-            clientId: `token-updater-client`,
+            clientId: `token-updater`,
             brokers: [configService.get('KAFKA_BROKERS', 'localhost:9092')],
           },
-          consumer: {
-            groupId: 'token-updater-consumer-client',
-            sessionTimeout: 45000,
-            heartbeatInterval: 10000,
-            rebalanceTimeout: 90000,
-            allowAutoTopicCreation:
-              configService.get('KAFKA_CONSUMER_ALLOW_AUTO_TOPIC_CREATION', 'true') === 'true',
-          },
+          producerOnlyMode: true,
           producer: { allowAutoTopicCreation: true },
-          subscribe: {
-            fromBeginning: true,
-          },
         },
       }),
     },
   ];
+};
+
+export const consumerConfig = {
+  transport: Transport.KAFKA as const,
+  options: {
+    client: {
+      clientId: `token-batch-consumer`,
+      brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
+    },
+    consumer: { groupId: 'token-batch-consumer', allowAutoTopicCreation: true },
+    subscribe: { fromBeginning: true },
+    consumerOnlyMode: true,
+  },
 };

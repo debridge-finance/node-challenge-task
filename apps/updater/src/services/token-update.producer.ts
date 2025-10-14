@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, Inject, OnModuleInit } from '@nestjs/common';
-import { ClientProxy, KafkaRetriableException } from '@nestjs/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 import {
   TokenPriceUpdateMessage,
   tokenPriceUpdateMessageSchema,
@@ -26,29 +26,7 @@ export class TokenUpdateProducer implements OnModuleInit, OnModuleDestroy {
 
       this.logger.debug(`Attempting to send message for token ${message.tokenId}`);
 
-      this.client.emit('token-price-updates', message).subscribe({
-        next: () => {
-          this.logger.log(
-            `Successfully sent price update for token ${message.tokenId}: ${
-              message.symbol
-            } price changed from ${message.oldPrice.toFixed(2)} to ${message.newPrice.toFixed(2)}`,
-          );
-        },
-        error: (err) => {
-          if (err instanceof KafkaRetriableException) {
-            this.logger.warn(
-              `Retriable error sending message: ${err.message}. Will retry automatically.`,
-            );
-          } else {
-            this.logger.error(`Error sending message: ${err.message}`, err.stack);
-          }
-        },
-        complete: () => {
-          this.logger.debug(`Message emission completed for token ${message.tokenId}`);
-        },
-      });
-
-      return;
+      this.client.emit('token-price-updates', message);
     } catch (error) {
       this.logger.error(`Error processing message: ${error.message}`, error.stack);
       throw error;

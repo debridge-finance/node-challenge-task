@@ -11,12 +11,26 @@ export const getKafkaConfig = (): ClientsModuleAsyncOptions => {
         transport: Transport.KAFKA,
         options: {
           client: {
-            clientId: 'token-scheduler-service',
+            clientId: 'scheduler',
             brokers: [configService.get('KAFKA_BROKERS', 'localhost:9092')],
           },
+          producerOnlyMode: true,
           producer: { allowAutoTopicCreation: true },
         },
       }),
     },
   ];
+};
+
+export const consumerConfig = {
+  transport: Transport.KAFKA as const,
+  options: {
+    client: {
+      clientId: 'price-updater-consumer',
+      brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
+    },
+    consumer: { groupId: 'price-updater-consumer', allowAutoTopicCreation: true },
+    subscribe: { fromBeginning: true },
+    consumerOnlyMode: true,
+  },
 };

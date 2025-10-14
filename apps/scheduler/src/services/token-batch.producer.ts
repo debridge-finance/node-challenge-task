@@ -1,21 +1,25 @@
 import { Injectable, Logger, OnModuleDestroy, Inject, OnModuleInit } from '@nestjs/common';
-import { ClientProxy, KafkaRetriableException } from '@nestjs/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 import { setImmediate } from 'timers/promises';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Token } from '../models/token.entity';
 import { createTokenBatchMessage } from '../models/token-batch-message';
 
 @Injectable()
 export class TokenBatchProducer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TokenBatchProducer.name);
-  private readonly batchSize = 2;
+  private readonly batchSize: number;
 
   constructor(
     @Inject('TOKEN_BATCH_SERVICE') private readonly client: ClientProxy,
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.batchSize = this.configService.get<number>('scheduler.batchSize', 2);
+  }
 
   async onModuleInit(): Promise<void> {
     try {
@@ -58,20 +62,11 @@ export class TokenBatchProducer implements OnModuleInit, OnModuleDestroy {
 
       return tokens.length;
     } catch (err) {
-      if (err instanceof KafkaRetriableException) {
-        this.logger.warn(
-          `Retriable error sending batch ${batchIndex + 1}/${batchCount}: ${
-            err.message
-          }. Will retry automatically.`,
-        );
-        return tokens.length;
-      } else {
-        this.logger.error(
-          `Error sending batch ${batchIndex + 1}/${batchCount}: ${err.message}`,
-          err.stack,
-        );
-        throw err;
-      }
+      this.logger.error(
+        `Error sending batch ${batchIndex + 1}/${batchCount}: ${err.message}`,
+        err.stack,
+      );
+      throw err;
     }
   }
 

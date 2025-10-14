@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { SchedulerModule } from './scheduler.module';
 import { Logger } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { consumerConfig } from './config/kafka.config';
 
 async function bootstrap() {
   const logger = new Logger('Main');
@@ -10,21 +11,7 @@ async function bootstrap() {
   try {
     const app = await NestFactory.create(SchedulerModule);
 
-    app.connectMicroservice<MicroserviceOptions>({
-      transport: Transport.KAFKA,
-      options: {
-        client: {
-          clientId: 'token-scheduler-service',
-          brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
-        },
-        consumer: {
-          groupId: 'token-scheduler-consumer',
-        },
-        subscribe: {
-          fromBeginning: true,
-        },
-      },
-    });
+    app.connectMicroservice<MicroserviceOptions>(consumerConfig);
 
     await app.startAllMicroservices();
     await app.listen(3002);

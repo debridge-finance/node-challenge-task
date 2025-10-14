@@ -12,12 +12,11 @@ import { TokenBatchProducer } from './services/token-batch.producer';
 import { PriceUpdateConsumer } from './price-update.consumer';
 import { getDatabaseConfig } from './config/database.config';
 import { getKafkaConfig } from './config/kafka.config';
+import { getSchedulerConfig } from './config/scheduler.config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true, load: [getSchedulerConfig] }),
     ScheduleModule.forRoot(),
     ClientsModule.registerAsync(getKafkaConfig()),
     TypeOrmModule.forRootAsync(getDatabaseConfig()),
@@ -26,18 +25,4 @@ import { getKafkaConfig } from './config/kafka.config';
   controllers: [PriceUpdateConsumer],
   providers: [SchedulerService, TokenSeeder, TokenBatchProducer],
 })
-export class SchedulerModule implements OnModuleInit {
-  constructor(
-    private readonly tokenSeeder: TokenSeeder,
-    private readonly scheduler: SchedulerService,
-  ) {}
-
-  async onModuleInit() {
-    try {
-      await this.tokenSeeder.seed();
-      await this.scheduler.handleCron();
-    } catch (error) {
-      console.error('Failed to initialize application:', error);
-    }
-  }
-}
+export class SchedulerModule {}

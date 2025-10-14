@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { UpdaterModule } from './updater.module';
 import { Logger } from '@nestjs/common';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { MicroserviceOptions } from '@nestjs/microservices';
+import { consumerConfig } from './config/kafka.config';
 
 async function bootstrap() {
   const logger = new Logger('Main');
@@ -10,25 +11,7 @@ async function bootstrap() {
   try {
     const app = await NestFactory.create(UpdaterModule);
 
-    app.connectMicroservice<MicroserviceOptions>({
-      transport: Transport.KAFKA,
-      options: {
-        client: {
-          clientId: `updater-server`,
-          brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
-        },
-        consumer: {
-          groupId: 'token-updater-consumer-server',
-          sessionTimeout: 45000,
-          heartbeatInterval: 10000,
-          rebalanceTimeout: 90000,
-          allowAutoTopicCreation: process.env.KAFKA_CONSUMER_ALLOW_AUTO_TOPIC_CREATION === 'true',
-        },
-        subscribe: {
-          fromBeginning: true,
-        },
-      },
-    });
+    app.connectMicroservice<MicroserviceOptions>(consumerConfig);
 
     await app.startAllMicroservices();
     await app.listen(3001);

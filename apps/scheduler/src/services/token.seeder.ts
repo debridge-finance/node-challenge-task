@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from '../models/token.entity';
@@ -9,9 +9,16 @@ import { validateChain } from '../models/chain.schema';
 import { validateLogo } from '../models/logo.schema';
 
 @Injectable()
-export class TokenSeeder {
+export class TokenSeeder implements OnModuleInit {
   private readonly logger = new Logger(TokenSeeder.name);
 
+  async onModuleInit() {
+    try {
+      await this.seed();
+    } catch (error) {
+      console.error('Failed to initialize application:', error);
+    }
+  }
   constructor(
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,

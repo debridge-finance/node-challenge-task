@@ -1,14 +1,43 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as cron from 'cron';
 import { TokenBatchProducer } from './token-batch.producer';
 
 @Injectable()
-export class SchedulerService {
+export class SchedulerService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SchedulerService.name);
+  private job: cron.CronJob | null = null;
 
-  constructor(private readonly batchProducerService: TokenBatchProducer) {}
+  constructor(
+    private readonly batchProducerService: TokenBatchProducer,
+    private readonly configService: ConfigService,
+  ) {}
 
-  @Cron(CronExpression.EVERY_5_SECONDS)
+  async onApplicationBootstrap() {
+    const enabled = this.configService.get<boolean>('scheduler.enabled');
+    const cronExpression =
+      this.configService.get<string>('scheduler.cronExpression') || '*/5 * * * * *';
+
+    if (enabled) {
+      this.setupCronJob(cronExpression);
+    } else {
+      this.logger.log('Price update scheduler is disabled');
+    }
+  }
+
+  private setupCronJob(cronExpression: string) {
+    try {
+      this.job = new cron.CronJob(cronExpression, () => {
+        this.handleCron();
+      });
+
+      this.job.start();
+      this.logger.log(`Price update scheduler started with cron expression: ${cronExpression}`);
+    } catch (error) {
+      this.logger.error(`Failed to setup cron job: ${error.message}`);
+    }
+  }
+
   async handleCron() {
     try {
       this.logger.log('Sending token batch...');
