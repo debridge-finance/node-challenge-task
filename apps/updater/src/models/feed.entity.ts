@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum FeedStatus {
   PENDING = 'pending',
@@ -14,6 +20,15 @@ export class Feed {
 
   @Column({ name: 'token_id', type: 'uuid' })
   tokenId: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  symbol: string | null;
+
+  @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
+  oldPrice: number;
+
+  @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
+  newPrice: number;
 
   @Column({
     type: 'enum',

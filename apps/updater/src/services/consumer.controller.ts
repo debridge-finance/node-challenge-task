@@ -1,4 +1,4 @@
-import { Logger, OnModuleInit, OnModuleDestroy, Controller } from '@nestjs/common';
+import { Logger, Controller } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MessagePattern, Payload } from '@nestjs/microservices';
@@ -7,7 +7,7 @@ import { tokenBatchMessageSchema } from '../models/token-batch-message';
 import { TokenProcessorService } from './token-processor.service';
 
 @Controller()
-export class Consumer implements OnModuleInit {
+export class Consumer {
   private readonly logger = new Logger(Consumer.name);
   private readonly instanceId = Math.random().toString(36).substring(2, 10);
 
@@ -17,10 +17,6 @@ export class Consumer implements OnModuleInit {
     private readonly tokenProcessorService: TokenProcessorService,
   ) {}
 
-  onModuleInit() {
-    this.logger.log(`Consumer instance initialized with ID: ${this.instanceId}`);
-  }
-
   @MessagePattern('token-batches')
   async handleTokenBatch(@Payload() message: unknown) {
     try {
@@ -29,7 +25,11 @@ export class Consumer implements OnModuleInit {
         `[Instance ${this.instanceId}] Received token batch with ID: ${parsedMessage.batchId}, timestamp: ${parsedMessage.timestamp}`,
       );
 
-      const feedEntries = parsedMessage.tokens.map((token) => ({ tokenId: token.id }));
+      const feedEntries = parsedMessage.tokens.map((token) => ({
+        tokenId: token.id,
+        symbol: token.symbol,
+        oldPrice: token.oldPrice,
+      }));
 
       const savedEntries = await this.feedRepository.save(feedEntries);
       this.logger.log(

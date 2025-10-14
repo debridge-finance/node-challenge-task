@@ -29,7 +29,7 @@ export class ProducerService implements OnModuleInit, OnModuleDestroy {
       this.client.emit('token-price-updates', message).subscribe({
         next: () => {
           this.logger.log(
-            `Successfully sent price update for token ${message.tokenId}: ${message.symbol} price changed from ${message.oldPrice} to ${message.newPrice}`,
+            `Successfully sent price update for token ${message.tokenId}: ${message.symbol} price changed from ${message.oldPrice.toFixed(2)} to ${message.newPrice.toFixed(2)}`,
           );
         },
         error: (err) => {

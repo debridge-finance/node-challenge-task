@@ -5,6 +5,10 @@ export const tokenBatchMessageSchema = z.object({
     z.object({
       id: z.string().uuid(),
       symbol: z.string().min(1),
+      oldPrice: z.union([
+        z.number(),
+        z.string().transform(val => parseFloat(val))
+      ]).pipe(z.number().nonnegative()),
     }),
   ),
   batchId: z.string().uuid(),

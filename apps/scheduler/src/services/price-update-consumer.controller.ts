@@ -32,7 +32,9 @@ export class PriceUpdateConsumer {
 
       await this.tokenRepository.save(token);
       this.logger.log(
-        `Updated price for token ${token.symbol}: ${parsedMessage.oldPrice} -> ${parsedMessage.newPrice}`,
+        `Updated price for token ${token.symbol}: ${parsedMessage.oldPrice.toFixed(
+          2,
+        )} -> ${parsedMessage.newPrice.toFixed(2)}`,
       );
     } catch (error) {
       this.logger.error(`Error processing price update: ${error.message}`);

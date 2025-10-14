@@ -6,6 +6,7 @@ export const tokenBatchMessageSchema = z.object({
     z.object({
       id: z.string().uuid(),
       symbol: z.string().min(1),
+      oldPrice: z.number().nonnegative(),
     }),
   ),
   batchId: z.string().uuid(),
@@ -15,7 +16,7 @@ export const tokenBatchMessageSchema = z.object({
 export type TokenBatchMessage = z.infer<typeof tokenBatchMessageSchema>;
 
 export function createTokenBatchMessage(data: {
-  tokens: Array<{ id: string; symbol: string }>;
+  tokens: Array<{ id: string; symbol: string; oldPrice: number }>;
   batchId?: string;
   timestamp?: Date;
 }): TokenBatchMessage {

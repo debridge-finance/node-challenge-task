@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { Feed, FeedStatus } from '../models/feed.entity';
 import { MockPriceProvider } from './mock-price.provider';
 import { ProducerService } from './producer.service';
@@ -27,7 +26,6 @@ export class TokenProcessorService {
     }
 
     this.logger.log(`[Instance ${this.instanceId}] Processing ${tokens.length} tokens...`);
-
     await Promise.all(
       tokens.map((token) =>
         this.feedRepository.update(token.id, { status: FeedStatus.PROCESSING }),
@@ -49,17 +47,15 @@ export class TokenProcessorService {
 
       const message = createTokenPriceUpdateMessage({
         tokenId: feed.tokenId,
-        symbol: 'UNKNOWN',
-        oldPrice: 0,
+        symbol: feed.symbol || 'UNKNOWN',
+        oldPrice: typeof feed.oldPrice === 'string' ? parseFloat(feed.oldPrice) : (Number(feed.oldPrice) || 0),
         newPrice,
       });
-
       await this.kafkaProducer.sendPriceUpdateMessage(message);
-
-      await this.feedRepository.update(feed.id, { status: FeedStatus.PROCESSED });
+      await this.feedRepository.update(feed.id, { status: FeedStatus.PROCESSED, newPrice });
 
       this.logger.log(
-        `[Instance ${this.instanceId}] Processed token ${feed.tokenId} with new price ${newPrice}`,
+        `[Instance ${this.instanceId}] Processed token ${feed.tokenId} with new price ${newPrice.toFixed(2)}`,
       );
     } catch (error) {
       this.logger.error(

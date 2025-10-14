@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, Inject, OnModuleInit } from '@nestjs/common';
 import { ClientProxy, KafkaRetriableException } from '@nestjs/microservices';
+import { setImmediate } from 'timers/promises';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from '../models/token.entity';
@@ -8,7 +9,6 @@ import { createTokenBatchMessage } from '../models/token-batch-message';
 @Injectable()
 export class BatchProducerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BatchProducerService.name);
-  private currentOffset = 0;
   private readonly batchSize = 2;
 
   constructor(
@@ -26,6 +26,55 @@ export class BatchProducerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private async fetchAndSendBatch(batchIndex: number, batchCount: number): Promise<number> {
+    const tokens = await this.tokenRepository.find({
+      skip: batchIndex * this.batchSize,
+      take: this.batchSize,
+    });
+
+    if (tokens.length === 0) {
+      this.logger.warn(`No tokens found for batch ${batchIndex + 1}`);
+      return 0;
+    }
+
+    const batchMessage = createTokenBatchMessage({
+      tokens: tokens.map((token) => ({
+        id: token.id,
+        symbol: token.symbol || 'UNKNOWN',
+        oldPrice: Number(token.price) || 0,
+      })),
+    });
+
+    this.logger.debug(
+      `Preparing batch ${batchIndex + 1}/${batchCount} with ${tokens.length} tokens`,
+    );
+
+    try {
+      this.client.emit('token-batches', batchMessage);
+
+      this.logger.log(
+        `Successfully sent batch ${batchIndex + 1}/${batchCount} with ${tokens.length} tokens`,
+      );
+
+      return tokens.length;
+    } catch (err) {
+      if (err instanceof KafkaRetriableException) {
+        this.logger.warn(
+          `Retriable error sending batch ${batchIndex + 1}/${batchCount}: ${
+            err.message
+          }. Will retry automatically.`,
+        );
+        return tokens.length;
+      } else {
+        this.logger.error(
+          `Error sending batch ${batchIndex + 1}/${batchCount}: ${err.message}`,
+          err.stack,
+        );
+        throw err;
+      }
+    }
+  }
+
   async sendTokenBatch(): Promise<void> {
     try {
       const totalTokens = await this.tokenRepository.count();
@@ -35,61 +84,32 @@ export class BatchProducerService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      if (this.currentOffset >= totalTokens) {
-        this.logger.log('Resetting offset to 0 after processing all tokens');
-        this.currentOffset = 0;
+      this.logger.log(`Processing ${totalTokens} tokens in batches of ${this.batchSize}`);
+
+      const batchCount = Math.ceil(totalTokens / this.batchSize);
+      this.logger.log(`Will send ${batchCount} batches in this cycle`);
+
+      let processedTokens = 0;
+
+      for (let batchIndex = 0; batchIndex < batchCount; batchIndex++) {
+        const tokensProcessed = await this.fetchAndSendBatch(batchIndex, batchCount);
+        processedTokens += tokensProcessed;
+
+        this.logger.debug(
+          `Batch ${
+            batchIndex + 1
+          }/${batchCount} processing completed (${processedTokens}/${totalTokens} tokens processed)`,
+        );
+
+        if (batchIndex < batchCount - 1) {
+          this.logger.debug('Resetting event loop to free memory with setImmediate');
+          await setImmediate();
+        }
       }
 
-      const tokens = await this.tokenRepository.find({
-        skip: this.currentOffset,
-        take: this.batchSize,
-      });
-
-      if (tokens.length === 0) {
-        this.logger.warn('No tokens found for the current offset');
-        this.currentOffset = 0;
-        return;
-      }
-
-      const batchMessage = createTokenBatchMessage({
-        tokens: tokens.map((token) => ({
-          id: token.id,
-          symbol: token.symbol || 'UNKNOWN',
-        })),
-      });
-
-      this.logger.debug(
-        `Attempting to send batch with ${tokens.length} tokens (offset: ${this.currentOffset}, batchSize: ${this.batchSize}, totalTokens: ${totalTokens})`,
+      this.logger.log(
+        `Completed sending all ${batchCount} batches (${processedTokens}/${totalTokens} tokens processed)`,
       );
-
-      this.client.emit('token-batches', batchMessage).subscribe({
-        next: () => {
-          this.logger.log(
-            `Successfully sent batch with ${tokens.length} tokens (offset: ${this.currentOffset})`,
-          );
-          this.currentOffset += this.batchSize;
-
-          if (this.currentOffset >= totalTokens) {
-            this.logger.log(
-              'Completed processing all tokens, resetting offset to 0 for next cycle',
-            );
-            this.currentOffset = 0;
-          }
-        },
-        error: (err) => {
-          if (err instanceof KafkaRetriableException) {
-            this.logger.warn(
-              `Retriable error sending batch: ${err.message}. Will retry automatically.`,
-            );
-          } else {
-            this.logger.error(`Error sending batch: ${err.message}`, err.stack);
-          }
-        },
-        complete: () => {
-          this.logger.debug('Batch emission completed');
-        },
-      });
-
       return;
     } catch (error) {
       this.logger.error(`Error processing batch: ${error.message}`, error.stack);
