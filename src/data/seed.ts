@@ -1,6 +1,6 @@
+import { TokenEntity } from '@/models/token';
 import { AppDataSource } from './data-source';
 import { TokenSeeder } from './token.seeder';
-import { Token } from '../models/token.entity';
 
 async function seed() {
   try {
@@ -9,7 +9,7 @@ async function seed() {
     console.log('Data source has been initialized');
 
     // Create token seeder
-    const tokenRepository = AppDataSource.getRepository(Token);
+    const tokenRepository = AppDataSource.getRepository(TokenEntity);
     const tokenSeeder = new TokenSeeder(tokenRepository);
 
     // Seed data

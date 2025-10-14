@@ -1,19 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { Token } from '../models/token.entity';
+import { TokenEntity } from '@/models/token';
 
+// ?: maybe we don't need a nest module here at all
 @Injectable()
-export class MockPriceService {
-  async getRandomPriceForToken(token: Token): Promise<number> {
-    // Simulate API call delay  
+export class PriceService {
+  public async getRandomPriceForToken(token: TokenEntity): Promise<number> {
+    // Simulate API call delay
     await new Promise<void>((resolve) => {
       setTimeout(() => {
         resolve();
       }, this.getRandomInt(50, 200));
     });
-    
+
     const basePrice = this.getRandomInt(1, 100000);
     const randomFactor = Math.random() * 10;
-    
+
     return basePrice * randomFactor;
   }
 

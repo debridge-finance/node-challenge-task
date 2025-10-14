@@ -1,0 +1,16 @@
+import 'dotenv/config';
+import { databaseConfig } from './database.config';
+
+const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const logLevel = process.env.LOG_LEVEL || 'info';
+
+/*
+ This configuration is used directly only when dependency injection is not working,
+ e.g. during application startup and its setup.
+ Also, it initially fulfills dynamic (dependency-injection-based, main) configuration.
+ */
+export const staticConfig = {
+  port,
+  logLevel,
+  database: databaseConfig,
+};
