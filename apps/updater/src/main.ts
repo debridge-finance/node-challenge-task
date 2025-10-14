@@ -10,14 +10,11 @@ async function bootstrap() {
   try {
     const app = await NestFactory.create(UpdaterModule);
 
-    const uniqueClientId = `token-updater-service-${Math.random().toString(36).substring(2, 10)}`;
-    logger.log(`Starting with client ID: ${uniqueClientId}`);
-
     app.connectMicroservice<MicroserviceOptions>({
       transport: Transport.KAFKA,
       options: {
         client: {
-          clientId: `${uniqueClientId}-server`,
+          clientId: `updater-server`,
           brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
         },
         consumer: {

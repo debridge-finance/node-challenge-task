@@ -6,8 +6,8 @@ import {
 } from '../models/token-price-update-message';
 
 @Injectable()
-export class ProducerService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(ProducerService.name);
+export class TokenUpdateProducer implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(TokenUpdateProducer.name);
 
   constructor(@Inject('TOKEN_PRICE_SERVICE') private readonly client: ClientProxy) {}
 
@@ -29,7 +29,9 @@ export class ProducerService implements OnModuleInit, OnModuleDestroy {
       this.client.emit('token-price-updates', message).subscribe({
         next: () => {
           this.logger.log(
-            `Successfully sent price update for token ${message.tokenId}: ${message.symbol} price changed from ${message.oldPrice.toFixed(2)} to ${message.newPrice.toFixed(2)}`,
+            `Successfully sent price update for token ${message.tokenId}: ${
+              message.symbol
+            } price changed from ${message.oldPrice.toFixed(2)} to ${message.newPrice.toFixed(2)}`,
           );
         },
         error: (err) => {

@@ -5,7 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule } from '@nestjs/microservices';
 import { Feed } from './models/feed.entity';
 import { TokenBatchConsumer } from './token-batch.consumer';
-import { ProducerService } from './services/producer.service';
+import { TokenUpdateProducer } from './services/token-update.producer';
 import { TokenProcessorService } from './services/token-processor.service';
 import { MockPriceProvider } from './services/mock-price.provider';
 import { getDatabaseConfig } from './config/database.config';
@@ -20,6 +20,6 @@ import { getKafkaConfig } from './config/kafka.config';
     TypeOrmModule.forFeature([Feed]),
   ],
   controllers: [TokenBatchConsumer],
-  providers: [ProducerService, TokenProcessorService, MockPriceProvider],
+  providers: [TokenUpdateProducer, TokenProcessorService, MockPriceProvider],
 })
 export class UpdaterModule {}

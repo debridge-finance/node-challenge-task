@@ -11,7 +11,7 @@ export const getKafkaConfig = (): ClientsModuleAsyncOptions => {
         transport: Transport.KAFKA,
         options: {
           client: {
-            clientId: `token-updater-service-${Math.random().toString(36).substring(2, 10)}-client`,
+            clientId: `token-updater-client`,
             brokers: [configService.get('KAFKA_BROKERS', 'localhost:9092')],
           },
           consumer: {
@@ -19,7 +19,8 @@ export const getKafkaConfig = (): ClientsModuleAsyncOptions => {
             sessionTimeout: 45000,
             heartbeatInterval: 10000,
             rebalanceTimeout: 90000,
-            allowAutoTopicCreation: configService.get('KAFKA_CONSUMER_ALLOW_AUTO_TOPIC_CREATION', 'true') === 'true',
+            allowAutoTopicCreation:
+              configService.get('KAFKA_CONSUMER_ALLOW_AUTO_TOPIC_CREATION', 'true') === 'true',
           },
           producer: { allowAutoTopicCreation: true },
           subscribe: {

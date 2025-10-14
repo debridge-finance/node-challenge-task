@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { BatchProducerService } from './batch-producer.service';
+import { TokenBatchProducer } from './token-batch.producer';
 
 @Injectable()
 export class SchedulerService {
   private readonly logger = new Logger(SchedulerService.name);
 
-  constructor(private readonly batchProducerService: BatchProducerService) {}
+  constructor(private readonly batchProducerService: TokenBatchProducer) {}
 
   @Cron(CronExpression.EVERY_5_SECONDS)
   async handleCron() {

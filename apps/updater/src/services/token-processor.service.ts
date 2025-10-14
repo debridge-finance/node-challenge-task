@@ -3,29 +3,26 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Feed, FeedStatus } from '../models/feed.entity';
 import { MockPriceProvider } from './mock-price.provider';
-import { ProducerService } from './producer.service';
+import { TokenUpdateProducer } from './token-update.producer';
 import { createTokenPriceUpdateMessage } from '../models/token-price-update-message';
 
 @Injectable()
 export class TokenProcessorService {
   private readonly logger = new Logger(TokenProcessorService.name);
-  private readonly instanceId = Math.random().toString(36).substring(2, 10);
 
   constructor(
     @InjectRepository(Feed)
     private readonly feedRepository: Repository<Feed>,
     private readonly priceService: MockPriceProvider,
-    private readonly kafkaProducer: ProducerService,
-  ) {
-    this.logger.log(`TokenProcessorService initialized with instance ID: ${this.instanceId}`);
-  }
+    private readonly kafkaProducer: TokenUpdateProducer,
+  ) {}
 
   async processTokensBatch(tokens: Feed[]) {
     if (tokens.length === 0) {
       return;
     }
 
-    this.logger.log(`[Instance ${this.instanceId}] Processing ${tokens.length} tokens...`);
+    this.logger.log(`Processing ${tokens.length} tokens...`);
     await Promise.all(
       tokens.map((token) =>
         this.feedRepository.update(token.id, { status: FeedStatus.PROCESSING }),
@@ -36,9 +33,7 @@ export class TokenProcessorService {
       await this.processToken(token);
     }
 
-    this.logger.log(
-      `[Instance ${this.instanceId}] Completed processing batch of ${tokens.length} tokens`,
-    );
+    this.logger.log(`Completed processing batch of ${tokens.length} tokens`);
   }
 
   private async processToken(feed: Feed) {
@@ -48,19 +43,15 @@ export class TokenProcessorService {
       const message = createTokenPriceUpdateMessage({
         tokenId: feed.tokenId,
         symbol: feed.symbol || 'UNKNOWN',
-        oldPrice: typeof feed.oldPrice === 'string' ? parseFloat(feed.oldPrice) : (Number(feed.oldPrice) || 0),
+        oldPrice: feed.oldPrice,
         newPrice,
       });
       await this.kafkaProducer.sendPriceUpdateMessage(message);
       await this.feedRepository.update(feed.id, { status: FeedStatus.PROCESSED, newPrice });
 
-      this.logger.log(
-        `[Instance ${this.instanceId}] Processed token ${feed.tokenId} with new price ${newPrice.toFixed(2)}`,
-      );
+      this.logger.log(` Processed token ${feed.tokenId} with new price ${newPrice.toFixed(2)}`);
     } catch (error) {
-      this.logger.error(
-        `[Instance ${this.instanceId}] Error processing token ${feed.tokenId}: ${error.message}`,
-      );
+      this.logger.error(`Error processing token ${feed.tokenId}: ${error.message}`);
 
       await this.feedRepository.update(feed.id, {
         status: FeedStatus.FAILED,

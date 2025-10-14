@@ -7,8 +7,8 @@ import { Token } from '../models/token.entity';
 import { createTokenBatchMessage } from '../models/token-batch-message';
 
 @Injectable()
-export class BatchProducerService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(BatchProducerService.name);
+export class TokenBatchProducer implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(TokenBatchProducer.name);
   private readonly batchSize = 2;
 
   constructor(

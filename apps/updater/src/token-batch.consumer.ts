@@ -9,7 +9,6 @@ import { TokenProcessorService } from './services/token-processor.service';
 @Controller()
 export class TokenBatchConsumer {
   private readonly logger = new Logger(TokenBatchConsumer.name);
-  private readonly instanceId = Math.random().toString(36).substring(2, 10);
 
   constructor(
     @InjectRepository(Feed)
@@ -22,7 +21,7 @@ export class TokenBatchConsumer {
     try {
       const parsedMessage = tokenBatchMessageSchema.parse(message);
       this.logger.log(
-        `[Instance ${this.instanceId}] Received token batch with ID: ${parsedMessage.batchId}, timestamp: ${parsedMessage.timestamp}`,
+        `Received token batch with ID: ${parsedMessage.batchId}, timestamp: ${parsedMessage.timestamp}`,
       );
 
       const feedEntries = parsedMessage.tokens.map((token) => ({
@@ -32,24 +31,15 @@ export class TokenBatchConsumer {
       }));
 
       const savedEntries = await this.feedRepository.save(feedEntries);
-      this.logger.log(
-        `[Instance ${this.instanceId}] Saved ${savedEntries.length} tokens to feed table`,
-      );
+      this.logger.log(`Saved ${savedEntries.length} tokens to feed table`);
 
       await this.tokenProcessorService.processTokensBatch(savedEntries);
-      this.logger.log(`[Instance ${this.instanceId}] Successfully processed token batch`);
+      this.logger.log(`Successfully processed token batch`);
     } catch (error) {
       if (error.errors) {
-        this.logger.error(
-          `[Instance ${this.instanceId}] Error processing token batch: ${JSON.stringify(
-            error.errors,
-          )}`,
-        );
+        this.logger.error(`Error processing token batch: ${JSON.stringify(error.errors)}`);
       } else {
-        this.logger.error(
-          `[Instance ${this.instanceId}] Error processing token batch: ${error.message}`,
-          error.stack,
-        );
+        this.logger.error(`Error processing token batch: ${error.message}`, error.stack);
       }
     }
   }

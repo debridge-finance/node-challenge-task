@@ -8,7 +8,7 @@ import { Token } from './models/token.entity';
 import { Chain } from './models/chain.entity';
 import { Logo } from './models/logo.entity';
 import { TokenSeeder } from './services/token.seeder';
-import { BatchProducerService } from './services/batch-producer.service';
+import { TokenBatchProducer } from './services/token-batch.producer';
 import { PriceUpdateConsumer } from './price-update.consumer';
 import { getDatabaseConfig } from './config/database.config';
 import { getKafkaConfig } from './config/kafka.config';
@@ -24,7 +24,7 @@ import { getKafkaConfig } from './config/kafka.config';
     TypeOrmModule.forFeature([Token, Chain, Logo]),
   ],
   controllers: [PriceUpdateConsumer],
-  providers: [SchedulerService, TokenSeeder, BatchProducerService],
+  providers: [SchedulerService, TokenSeeder, TokenBatchProducer],
 })
 export class SchedulerModule implements OnModuleInit {
   constructor(
