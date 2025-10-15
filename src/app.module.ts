@@ -5,11 +5,6 @@ import { KafkaModule } from '@/drivers/kafka';
 import { TokenServiceModule } from '@/services/token';
 
 @Module({
-  imports: [
-    ConfigModule,
-    KafkaModule,
-    DatabaseModule,
-    TokenServiceModule,
-  ],
+  imports: [ConfigModule, KafkaModule, DatabaseModule, TokenServiceModule],
 })
 export class AppModule {}
