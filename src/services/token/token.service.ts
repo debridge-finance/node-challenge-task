@@ -35,7 +35,7 @@ export class TokenService {
   private async updateTokensPrices(tokens: TokenEntity[]): Promise<void> {
     try {
       const newPrices = await this.priceService.getPricesForTokens(tokens);
-      let promises = tokens.map((t, i) => {
+      const promises = tokens.map((t, i) => {
         const oldPrice = t.price;
         const newPrice = newPrices[i]!;
 
@@ -52,7 +52,7 @@ export class TokenService {
             manager.getRepository(TokenEntity);
 
           t.price = newPrice;
-          t.lastPriceUpdate = new Date(); // !: Or, we could just use @UpdateDateColumn
+          t.lastPriceUpdate = new Date(); // ?: Or, we could just use @UpdateDateColumn
 
           await tokenRepo.save(t);
           this.logger.log(
