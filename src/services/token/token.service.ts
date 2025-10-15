@@ -48,7 +48,7 @@ export class TokenService {
         .take(batchSize);
 
       if (lastId) {
-        qb.where('t.id > :lastId', { lastId });
+        qb.andWhere('t.id > :lastId', { lastId });
       }
 
       const batch = await qb.getMany();
@@ -63,17 +63,19 @@ export class TokenService {
     try {
       const chainIds = await this.getAllChainIds();
 
-      let total = 0;
-
       // !: If this scales to many chains, it may overwhelm Kafka and the DB.
       // Consider a concurrency limiter (e.g., a semaphore) to cap parallel chains.
       const promises = chainIds.map(async (chainId) => {
+        let processed = 0;
         for await (const batch of this.iterateTokensInBatches(chainId)) {
           await this.updateTokensPrices(chainId, batch);
-          total += batch.length;
+          processed += batch.length;
         }
+        return processed;
       });
       const results = await Promise.allSettled(promises);
+
+      let total = 0;
       results.forEach((result, i) => {
         const chainId = chainIds[i]!;
         if (result.status === 'rejected') {
@@ -84,6 +86,8 @@ export class TokenService {
             },
             'Prices update for the chain has failed.',
           );
+        } else {
+            total += result.value;
         }
       });
 
