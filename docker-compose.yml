@@ -35,6 +35,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      scheduler:
+        condition: service_started
     expose:
       - '3001'
     environment:

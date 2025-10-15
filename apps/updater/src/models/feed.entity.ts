@@ -24,10 +24,10 @@ export class Feed {
   @Column({ type: 'varchar', nullable: true })
   symbol: string | null;
 
-  @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
+  @Column({ name: 'old_price', type: 'decimal', precision: 28, scale: 0, default: 0 })
   oldPrice: number;
 
-  @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
+  @Column({ name: 'new_price', type: 'decimal', precision: 28, scale: 0, default: 0 })
   newPrice: number;
 
   @Column({

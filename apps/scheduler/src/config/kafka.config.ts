@@ -21,16 +21,3 @@ export const getKafkaConfig = (): ClientsModuleAsyncOptions => {
     },
   ];
 };
-
-export const consumerConfig = {
-  transport: Transport.KAFKA as const,
-  options: {
-    client: {
-      clientId: 'price-updater-consumer',
-      brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
-    },
-    consumer: { groupId: 'price-updater-consumer', allowAutoTopicCreation: true },
-    subscribe: { fromBeginning: true },
-    consumerOnlyMode: true,
-  },
-};

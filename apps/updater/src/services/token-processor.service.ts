@@ -1,10 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Feed, FeedStatus } from '../models/feed.entity';
 import { MockPriceProvider } from './mock-price.provider';
 import { TokenUpdateProducer } from './token-update.producer';
 import { createTokenPriceUpdateMessage } from '../models/token-price-update-message';
+
+interface TokenUpdate {
+  id: string;
+  status: FeedStatus;
+  oldPrice?: number;
+  newPrice?: number;
+  error?: string;
+}
 
 @Injectable()
 export class TokenProcessorService {
@@ -23,40 +31,78 @@ export class TokenProcessorService {
     }
 
     this.logger.log(`Processing ${tokens.length} tokens...`);
-    await Promise.all(
-      tokens.map((token) =>
-        this.feedRepository.update(token.id, { status: FeedStatus.PROCESSING }),
-      ),
-    );
+
+    const tokenIds = tokens.map((token) => token.id);
+    await this.feedRepository.update({ id: In(tokenIds) }, { status: FeedStatus.PROCESSING });
+
+    const updates: TokenUpdate[] = [];
 
     for (const token of tokens) {
-      await this.processToken(token);
+      try {
+        const newPrice = await this.priceService.getRandomPriceForToken({ id: token.tokenId });
+
+        const message = createTokenPriceUpdateMessage({
+          tokenId: token.tokenId,
+          symbol: token.symbol || 'UNKNOWN',
+          oldPrice: token.oldPrice,
+          newPrice,
+        });
+
+        await this.kafkaProducer.sendPriceUpdateMessage(message);
+
+        updates.push({
+          id: token.id,
+          status: FeedStatus.PROCESSED,
+          oldPrice: token.oldPrice,
+          newPrice,
+        });
+
+        this.logger.log(`Processed token ${token.tokenId} with new price ${newPrice.toFixed(2)}`);
+      } catch (error) {
+        this.logger.error(`Error processing token ${token.tokenId}: ${error.message}`);
+
+        updates.push({
+          id: token.id,
+          status: FeedStatus.FAILED,
+          oldPrice: token.oldPrice,
+          error: error.message,
+        });
+      }
     }
+
+    await this.batchUpdateTokens(updates);
 
     this.logger.log(`Completed processing batch of ${tokens.length} tokens`);
   }
 
-  private async processToken(feed: Feed) {
-    try {
-      const newPrice = await this.priceService.getRandomPriceForToken({ id: feed.tokenId });
+  private async batchUpdateTokens(updates: TokenUpdate[]) {
+    if (updates.length === 0) return;
 
-      const message = createTokenPriceUpdateMessage({
-        tokenId: feed.tokenId,
-        symbol: feed.symbol || 'UNKNOWN',
-        oldPrice: feed.oldPrice,
-        newPrice,
-      });
-      await this.kafkaProducer.sendPriceUpdateMessage(message);
-      await this.feedRepository.update(feed.id, { status: FeedStatus.PROCESSED, newPrice });
+    const successfulUpdates = updates.filter((update) => update.status === FeedStatus.PROCESSED);
+    const failedUpdates = updates.filter((update) => update.status === FeedStatus.FAILED);
 
-      this.logger.log(` Processed token ${feed.tokenId} with new price ${newPrice.toFixed(2)}`);
-    } catch (error) {
-      this.logger.error(`Error processing token ${feed.tokenId}: ${error.message}`);
+    if (successfulUpdates.length > 0) {
+      await Promise.all(
+        successfulUpdates.map((update) =>
+          this.feedRepository.update(update.id, {
+            status: FeedStatus.PROCESSED,
+            newPrice: update.newPrice,
+          }),
+        ),
+      );
+      this.logger.log(`Updated ${successfulUpdates.length} tokens to PROCESSED status`);
+    }
 
-      await this.feedRepository.update(feed.id, {
-        status: FeedStatus.FAILED,
-        error: error.message,
-      });
+    if (failedUpdates.length > 0) {
+      await Promise.all(
+        failedUpdates.map((update) =>
+          this.feedRepository.update(update.id, {
+            status: FeedStatus.FAILED,
+            error: update.error,
+          }),
+        ),
+      );
+      this.logger.log(`Updated ${failedUpdates.length} tokens to FAILED status`);
     }
   }
 }

@@ -9,8 +9,8 @@ import { validateChain } from '../../models/chain.schema';
 import { validateLogo } from '../../models/logo.schema';
 
 @Injectable()
-export class TokenSeeder implements OnModuleInit {
-  private readonly logger = new Logger(TokenSeeder.name);
+export class TokenSeederService implements OnModuleInit {
+  private readonly logger = new Logger(TokenSeederService.name);
 
   async onModuleInit() {
     try {
