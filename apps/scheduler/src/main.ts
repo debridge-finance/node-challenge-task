@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
-import { SchedulerModule } from './scheduler.module';
+import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { MicroserviceOptions } from '@nestjs/microservices';
 import { consumerConfig } from './config/kafka.config';
 
 async function bootstrap() {
@@ -9,7 +9,7 @@ async function bootstrap() {
   logger.log('Starting Token Scheduler Service...');
 
   try {
-    const app = await NestFactory.create(SchedulerModule);
+    const app = await NestFactory.create(AppModule);
 
     app.connectMicroservice<MicroserviceOptions>(consumerConfig);
 

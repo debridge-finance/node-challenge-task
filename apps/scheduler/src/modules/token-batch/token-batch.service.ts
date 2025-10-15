@@ -4,12 +4,13 @@ import { setImmediate } from 'timers/promises';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { Token } from '../models/token.entity';
-import { createTokenBatchMessage } from '../models/token-batch-message';
+import { Token } from '../../models/token.entity';
+import { createTokenBatchMessage } from '../../models/token-batch-message';
+import { TokenBatchProducer } from './token-batch.producer';
 
 @Injectable()
-export class TokenBatchProducer implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(TokenBatchProducer.name);
+export class TokenBatchService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(TokenBatchService.name);
   private readonly batchSize: number;
 
   constructor(
@@ -17,6 +18,7 @@ export class TokenBatchProducer implements OnModuleInit, OnModuleDestroy {
     @InjectRepository(Token)
     private readonly tokenRepository: Repository<Token>,
     private readonly configService: ConfigService,
+    private readonly tokenBatchProducer: TokenBatchProducer,
   ) {
     this.batchSize = this.configService.get<number>('scheduler.batchSize', 2);
   }
@@ -54,8 +56,7 @@ export class TokenBatchProducer implements OnModuleInit, OnModuleDestroy {
     );
 
     try {
-      this.client.emit('token-batches', batchMessage);
-
+      this.tokenBatchProducer.sendMessage(batchMessage);
       this.logger.log(
         `Successfully sent batch ${batchIndex + 1}/${batchCount} with ${tokens.length} tokens`,
       );

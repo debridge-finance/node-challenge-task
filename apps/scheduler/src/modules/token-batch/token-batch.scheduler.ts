@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as cron from 'cron';
-import { TokenBatchProducer } from './token-batch.producer';
+import { TokenBatchService } from './token-batch.service';
 
 @Injectable()
 export class SchedulerService implements OnApplicationBootstrap {
@@ -9,7 +9,7 @@ export class SchedulerService implements OnApplicationBootstrap {
   private job: cron.CronJob | null = null;
 
   constructor(
-    private readonly batchProducerService: TokenBatchProducer,
+    private readonly tokenBatchService: TokenBatchService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -27,9 +27,7 @@ export class SchedulerService implements OnApplicationBootstrap {
 
   private setupCronJob(cronExpression: string) {
     try {
-      this.job = new cron.CronJob(cronExpression, () => {
-        this.handleCron();
-      });
+      this.job = new cron.CronJob(cronExpression, () => this.handleCron());
 
       this.job.start();
       this.logger.log(`Price update scheduler started with cron expression: ${cronExpression}`);
@@ -40,8 +38,8 @@ export class SchedulerService implements OnApplicationBootstrap {
 
   async handleCron() {
     try {
-      this.logger.log('Sending token batch...');
-      return this.batchProducerService.sendTokenBatch();
+      this.logger.log('Preparing and sending token batches...');
+      await this.tokenBatchService.sendTokenBatch();
     } catch (error) {
       this.logger.error(`Error sending token batch: ${error.message}`);
     }

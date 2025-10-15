@@ -1,12 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Token } from '../models/token.entity';
-import { Chain } from '../models/chain.entity';
-import { Logo } from '../models/logo.entity';
-import { validateToken } from '../models/token.schema';
-import { validateChain } from '../models/chain.schema';
-import { validateLogo } from '../models/logo.schema';
+import { Token } from '../../models/token.entity';
+import { Chain } from '../../models/chain.entity';
+import { Logo } from '../../models/logo.entity';
+import { validateToken } from '../../models/token.schema';
+import { validateChain } from '../../models/chain.schema';
+import { validateLogo } from '../../models/logo.schema';
 
 @Injectable()
 export class TokenSeeder implements OnModuleInit {
