@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { KafkaService } from '@/drivers/kafka';
@@ -14,19 +15,44 @@ export class TokenService {
     private readonly tokenRepository: Repository<TokenEntity>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
+    private readonly config: ConfigService,
     private readonly priceService: PriceService,
     private readonly kafkaProducer: KafkaService,
   ) {}
 
+  private get batchSize(): number {
+    return this.config.getOrThrow<number>('contracts.multicallBatchSize');
+  }
+
+  private async *iterateTokensInBatches(batchSize = this.batchSize) {
+    let lastId: string | null = null;
+
+    while (true) {
+      const qb = this.tokenRepository
+        .createQueryBuilder('t')
+        .orderBy('t.id', 'ASC')
+        .take(batchSize);
+
+      if (lastId) {
+        qb.where('t.id > :lastId', { lastId });
+      }
+
+      const batch = await qb.getMany();
+      if (batch.length === 0) return;
+
+      yield batch;
+      lastId = batch[batch.length - 1]!.id;
+    }
+  }
+
   public async updatePrices(): Promise<void> {
     try {
-      /*
-      !: Since the timer was set to 5 seconds, I assume the number of tokens is fixed and less than +-100.
-      If there are many more, streams should be used.
-       */
-      const tokens = await this.tokenRepository.find();
-      this.logger.verbose(`Updating prices for ${tokens.length} tokens...`);
-      await this.updateTokensPrices(tokens);
+      let total = 0;
+      for await (const batch of this.iterateTokensInBatches()) {
+        await this.updateTokensPrices(batch);
+        total += batch.length;
+      }
+      this.logger.verbose(`Prices updated for ~${total} tokens (batched).`);
     } catch (error) {
       this.logger.error(`Error updating prices: ${error.message}`);
     }

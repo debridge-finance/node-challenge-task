@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { databaseConfig } from './database.config';
+import { contractsConfig } from './contracts.config';
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const logLevel = process.env.LOG_LEVEL
@@ -15,4 +16,5 @@ export const staticConfig = {
   port,
   logLevel,
   database: databaseConfig,
+  contracts: contractsConfig,
 };
