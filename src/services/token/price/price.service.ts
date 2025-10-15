@@ -5,14 +5,25 @@ import { TokenEntity } from '@/models/token';
 @Injectable()
 export class PriceService {
   /**
+   * @param chainId
    * @param tokens - array, because of multicall
    */
-  public async getPricesForTokens(tokens: TokenEntity[]): Promise<number[]> {
+  public async getPricesForTokens(
+    chainId: string,
+    tokens: TokenEntity[],
+  ): Promise<number[]> {
     // TODO: real data
     // Simulate API call delay
     await setTimeout(this.getRandomInt(50, 200));
 
-    return tokens.map((t) => this.getRandomInt(1, 100000) * Math.random() * 10);
+    return tokens.map((t) => {
+      if (chainId !== t.chainId) {
+        throw new Error(
+          `Wrong chain id: ${t.id} -> ${t.chainId} != ${chainId}`,
+        );
+      }
+      return this.getRandomInt(1, 100000) * Math.random() * 10;
+    });
   }
 
   private getRandomInt(min: number, max: number): number {

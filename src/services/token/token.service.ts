@@ -24,12 +24,26 @@ export class TokenService {
     return this.config.getOrThrow<number>('contracts.multicallBatchSize');
   }
 
-  private async *iterateTokensInBatches(batchSize = this.batchSize) {
+  private async getAllChainIds(): Promise<string[]> {
+    const rows = await this.tokenRepository
+      .createQueryBuilder('t')
+      .select('DISTINCT t.chainId', 'chainId')
+      .orderBy('t.chainId', 'ASC')
+      .getRawMany<{ chainId: string }>();
+
+    return rows.map((r) => r.chainId);
+  }
+
+  private async *iterateTokensInBatches(
+    chainId: string,
+    batchSize = this.batchSize,
+  ) {
     let lastId: string | null = null;
 
     while (true) {
       const qb = this.tokenRepository
         .createQueryBuilder('t')
+        .where('t.chainId = :chainId', { chainId })
         .orderBy('t.id', 'ASC')
         .take(batchSize);
 
@@ -47,20 +61,31 @@ export class TokenService {
 
   public async updatePrices(): Promise<void> {
     try {
+      const chainIds = await this.getAllChainIds();
+
       let total = 0;
-      for await (const batch of this.iterateTokensInBatches()) {
-        await this.updateTokensPrices(batch);
-        total += batch.length;
+      for (const chainId of chainIds) {
+        for await (const batch of this.iterateTokensInBatches(chainId)) {
+          await this.updateTokensPrices(chainId, batch);
+          total += batch.length;
+        }
       }
+
       this.logger.verbose(`Prices updated for ~${total} tokens (batched).`);
     } catch (error) {
       this.logger.error(`Error updating prices: ${error.message}`);
     }
   }
 
-  private async updateTokensPrices(tokens: TokenEntity[]): Promise<void> {
+  private async updateTokensPrices(
+    chainId: string,
+    tokens: TokenEntity[],
+  ): Promise<void> {
     try {
-      const newPrices = await this.priceService.getPricesForTokens(tokens);
+      const newPrices = await this.priceService.getPricesForTokens(
+        chainId,
+        tokens,
+      );
       const promises = tokens.map((t, i) => {
         const oldPrice = t.price;
         const newPrice = newPrices[i]!;
