@@ -87,7 +87,7 @@ export class TokenService {
             'Prices update for the chain has failed.',
           );
         } else {
-            total += result.value;
+          total += result.value;
         }
       });
 
@@ -130,6 +130,7 @@ export class TokenService {
             `Updated price for ${t.symbol}: ${oldPrice} -> ${newPrice}`,
           );
           // After save to DB
+          // !: it is still better to use outbox, because of potential out of sync: rollback, deadlock, etc.
           await this.kafkaProducer.sendPriceUpdateMessage(message);
         });
       });
