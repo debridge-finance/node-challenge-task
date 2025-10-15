@@ -12,7 +12,7 @@ export class TokenCron {
   @Cron(CronExpression.EVERY_5_SECONDS)
   async run(): Promise<void> {
     if (this.isRunning) {
-      this.logger.warn('skip run -> isRunning');
+      this.logger.warn('Skip run -> isRunning');
       return;
     }
     this.isRunning = true;

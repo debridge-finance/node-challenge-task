@@ -1,15 +1,29 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
+import { staticConfig } from '@/config';
+import { Logger, LogLevel } from '@nestjs/common';
 import { AppModule } from './app.module';
+
+const levelMap: Record<string, LogLevel[]> = {
+  fatal: ['fatal'],
+  error: ['error'],
+  warn: ['error', 'warn'],
+  log: ['error', 'warn', 'log'],
+  debug: ['error', 'warn', 'log', 'debug'],
+  verbose: ['error', 'warn', 'log', 'debug', 'verbose'],
+};
 
 async function bootstrap() {
   const logger = new Logger('Main');
   logger.log('Starting Token Price Service...');
 
   try {
-    const app = await NestFactory.create(AppModule);
-    await app.listen(3000);
-    logger.log('Service is running on port 3000');
+    const { port, logLevel } = staticConfig;
+    const app = await NestFactory.create(AppModule, {
+      logger: levelMap[logLevel],
+    });
+
+    await app.listen(port);
+    logger.log(`Service is running on port ${port}`);
   } catch (error) {
     // Bug: Not handling exceptions properly
     logger.error(`Error: ${error.message}`);

@@ -2,15 +2,13 @@ import { setTimeout } from 'node:timers/promises';
 import { Injectable } from '@nestjs/common';
 import { TokenEntity } from '@/models/token';
 
-// ?: maybe we don't need a nest module here at all
 @Injectable()
 export class PriceService {
   /**
    * @param tokens - array, because of multicall
    */
-  public async getRandomPricesForTokens(
-    tokens: TokenEntity[],
-  ): Promise<number[]> {
+  public async getPricesForTokens(tokens: TokenEntity[]): Promise<number[]> {
+    // TODO: real data
     // Simulate API call delay
     await setTimeout(this.getRandomInt(50, 200));
 

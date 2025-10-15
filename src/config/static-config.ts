@@ -2,7 +2,9 @@ import 'dotenv/config';
 import { databaseConfig } from './database.config';
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
-const logLevel = process.env.LOG_LEVEL || 'info';
+const logLevel = process.env.LOG_LEVEL
+  ? process.env.LOG_LEVEL.toLowerCase()
+  : 'info';
 
 /*
  This configuration is used directly only when dependency injection is not working,

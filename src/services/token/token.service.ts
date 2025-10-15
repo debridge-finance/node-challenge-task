@@ -34,9 +34,7 @@ export class TokenService {
 
   private async updateTokensPrices(tokens: TokenEntity[]): Promise<void> {
     try {
-      const newPrices = await this.priceService.getRandomPricesForTokens(
-        tokens,
-      );
+      const newPrices = await this.priceService.getPricesForTokens(tokens);
       let promises = tokens.map((t, i) => {
         const oldPrice = t.price;
         const newPrice = newPrices[i]!;
@@ -50,18 +48,18 @@ export class TokenService {
         });
 
         return this.dataSource.transaction(async (manager) => {
-            const tokenRepo: Repository<TokenEntity> =
-                manager.getRepository(TokenEntity);
+          const tokenRepo: Repository<TokenEntity> =
+            manager.getRepository(TokenEntity);
 
-            t.price = newPrice;
-            t.lastPriceUpdate = new Date(); // !: Or, we could just use @UpdateDateColumn
+          t.price = newPrice;
+          t.lastPriceUpdate = new Date(); // !: Or, we could just use @UpdateDateColumn
 
-            await tokenRepo.save(t);
-            this.logger.log(
-                `Updated price for ${t.symbol}: ${oldPrice} -> ${newPrice}`,
-            );
-            // After save to DB
-            await this.kafkaProducer.sendPriceUpdateMessage(message);
+          await tokenRepo.save(t);
+          this.logger.log(
+            `Updated price for ${t.symbol}: ${oldPrice} -> ${newPrice}`,
+          );
+          // After save to DB
+          await this.kafkaProducer.sendPriceUpdateMessage(message);
         });
       });
       await Promise.all(promises);
