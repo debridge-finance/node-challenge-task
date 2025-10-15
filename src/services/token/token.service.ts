@@ -62,7 +62,20 @@ export class TokenService {
           await this.kafkaProducer.sendPriceUpdateMessage(message);
         });
       });
-      await Promise.all(promises);
+      const results = await Promise.allSettled(promises);
+      results.forEach((result, i) => {
+        const token = tokens[i]!;
+        if (result.status === 'rejected') {
+          this.logger.error(
+            {
+              err: result.reason,
+              chainId: token.chainId,
+              token: token.address,
+            },
+            'Price update for the token has failed.',
+          );
+        }
+      });
     } catch (error) {
       this.logger.error(`Error updating prices for tokens: ${error.message}`);
     }
