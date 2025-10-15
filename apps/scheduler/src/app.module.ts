@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { getDatabaseConfig } from './config/database.config';
 import { TokenSeederModule } from './modules/token-seeder/token-seeder.module';
 import { TokenBatchModule } from './modules/token-batch/token-batch.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -14,6 +15,6 @@ import { TokenBatchModule } from './modules/token-batch/token-batch.module';
     TokenSeederModule,
     TokenBatchModule,
   ],
-  controllers: [],
+  controllers: [HealthController],
 })
 export class AppModule {}

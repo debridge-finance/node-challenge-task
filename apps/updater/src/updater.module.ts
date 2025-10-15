@@ -10,6 +10,7 @@ import { TokenProcessorService } from './services/token-processor.service';
 import { MockPriceProvider } from './services/mock-price.provider';
 import { getDatabaseConfig } from './config/database.config';
 import { getKafkaConfig } from './config/kafka.config';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { getKafkaConfig } from './config/kafka.config';
     TypeOrmModule.forRootAsync(getDatabaseConfig()),
     TypeOrmModule.forFeature([Feed]),
   ],
-  controllers: [TokenBatchConsumer],
+  controllers: [TokenBatchConsumer, HealthController],
   providers: [TokenUpdateProducer, TokenProcessorService, MockPriceProvider],
 })
 export class UpdaterModule {}

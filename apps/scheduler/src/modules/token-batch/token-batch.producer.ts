@@ -4,17 +4,10 @@ import { TokenBatchMessage } from '../../models/token-batch-message';
 
 @Injectable()
 export class TokenBatchProducer implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(TokenBatchProducer.name);
-
   constructor(@Inject('TOKEN_BATCH_SERVICE') private readonly client: ClientProxy) {}
 
   async onModuleInit(): Promise<void> {
-    try {
-      await this.client.connect();
-      this.logger.log('Connected to microservice transport');
-    } catch (error) {
-      this.logger.error(`Failed to connect to microservice transport: ${error.message}`);
-    }
+    await this.client.connect();
   }
 
   public async sendMessage(message: TokenBatchMessage) {
@@ -22,14 +15,6 @@ export class TokenBatchProducer implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    try {
-      this.logger.log('Shutting down batch producer service...');
-      await this.client.close();
-      this.logger.log('Successfully disconnected from microservice transport');
-    } catch (error) {
-      this.logger.error('Error disconnecting from microservice transport', error.stack);
-    } finally {
-      this.logger.log('Batch producer service shutdown complete');
-    }
+    await this.client.close();
   }
 }

@@ -16,7 +16,7 @@ export const getDatabaseConfig = (): TypeOrmModuleAsyncOptions => {
       entities: [Feed],
       migrations: [`${__dirname}/../migrations/**/*{.ts,.js}`],
       migrationsRun: true,
-      synchronize: true, // Set to true to automatically create tables
+      synchronize: true,
       ssl: false,
     }),
   };

@@ -26,22 +26,14 @@ export class SchedulerService implements OnApplicationBootstrap {
   }
 
   private setupCronJob(cronExpression: string) {
-    try {
-      this.job = new cron.CronJob(cronExpression, () => this.handleCron());
+    this.job = new cron.CronJob(cronExpression, () => this.handleCron());
 
-      this.job.start();
-      this.logger.log(`Price update scheduler started with cron expression: ${cronExpression}`);
-    } catch (error) {
-      this.logger.error(`Failed to setup cron job: ${error.message}`);
-    }
+    this.job.start();
+    this.logger.log(`Price update scheduler started with cron expression: ${cronExpression}`);
   }
 
   async handleCron() {
-    try {
-      this.logger.log('Preparing and sending token batches...');
-      await this.tokenBatchService.sendTokenBatch();
-    } catch (error) {
-      this.logger.error(`Error sending token batch: ${error.message}`);
-    }
+    this.logger.log('Preparing and sending token batches...');
+    await this.tokenBatchService.sendTokenBatch();
   }
 }

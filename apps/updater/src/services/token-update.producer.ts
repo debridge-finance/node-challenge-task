@@ -12,36 +12,17 @@ export class TokenUpdateProducer implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject('TOKEN_PRICE_SERVICE') private readonly client: ClientProxy) {}
 
   async onModuleInit(): Promise<void> {
-    try {
-      await this.client.connect();
-      this.logger.log('Connected to microservice transport');
-    } catch (error) {
-      this.logger.error(`Failed to connect to microservice transport: ${error.message}`);
-    }
+    await this.client.connect();
   }
 
   async sendPriceUpdateMessage(message: TokenPriceUpdateMessage): Promise<void> {
-    try {
-      tokenPriceUpdateMessageSchema.parse(message);
+    tokenPriceUpdateMessageSchema.parse(message);
 
-      this.logger.debug(`Attempting to send message for token ${message.tokenId}`);
-
-      this.client.emit('token-price-updates', message);
-    } catch (error) {
-      this.logger.error(`Error processing message: ${error.message}`, error.stack);
-      throw error;
-    }
+    this.logger.debug(`Attempting to send message for token ${message.tokenId}`);
+    this.client.emit('token-price-updates', message);
   }
 
   async onModuleDestroy(): Promise<void> {
-    try {
-      this.logger.log('Shutting down producer service...');
-      await this.client.close();
-      this.logger.log('Successfully disconnected from microservice transport');
-    } catch (error) {
-      this.logger.error('Error disconnecting from microservice transport', error.stack);
-    } finally {
-      this.logger.log('Producer service shutdown complete');
-    }
+    await this.client.close();
   }
 }

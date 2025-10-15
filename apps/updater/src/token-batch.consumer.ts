@@ -18,29 +18,21 @@ export class TokenBatchConsumer {
 
   @MessagePattern('token-batches')
   async handleTokenBatch(@Payload() message: unknown) {
-    try {
-      const parsedMessage = tokenBatchMessageSchema.parse(message);
-      this.logger.log(
-        `Received token batch with ID: ${parsedMessage.batchId}, timestamp: ${parsedMessage.timestamp}`,
-      );
+    const parsedMessage = tokenBatchMessageSchema.parse(message);
+    this.logger.log(
+      `Received token batch with ID: ${parsedMessage.batchId}, timestamp: ${parsedMessage.timestamp}`,
+    );
 
-      const feedEntries = parsedMessage.tokens.map((token) => ({
-        tokenId: token.id,
-        symbol: token.symbol,
-        oldPrice: token.oldPrice,
-      }));
+    const feedEntries = parsedMessage.tokens.map((token) => ({
+      tokenId: token.id,
+      symbol: token.symbol,
+      oldPrice: token.oldPrice,
+    }));
 
-      const savedEntries = await this.feedRepository.save(feedEntries);
-      this.logger.log(`Saved ${savedEntries.length} tokens to feed table`);
+    const savedEntries = await this.feedRepository.save(feedEntries);
+    this.logger.log(`Saved ${savedEntries.length} tokens to feed table`);
 
-      await this.tokenProcessorService.processTokensBatch(savedEntries);
-      this.logger.log(`Successfully processed token batch`);
-    } catch (error) {
-      if (error.errors) {
-        this.logger.error(`Error processing token batch: ${JSON.stringify(error.errors)}`);
-      } else {
-        this.logger.error(`Error processing token batch: ${error.message}`, error.stack);
-      }
-    }
+    await this.tokenProcessorService.processTokensBatch(savedEntries);
+    this.logger.log(`Successfully processed token batch`);
   }
 }

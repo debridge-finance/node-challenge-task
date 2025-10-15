@@ -3,6 +3,7 @@ import { UpdaterModule } from './updater.module';
 import { Logger } from '@nestjs/common';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { consumerConfig } from './config/kafka.config';
+import { AllExceptionsFilter, DatabaseExceptionsFilter, KafkaExceptionsFilter } from './exceptions';
 
 async function bootstrap() {
   const logger = new Logger('Main');
@@ -11,6 +12,12 @@ async function bootstrap() {
   try {
     const app = await NestFactory.create(UpdaterModule);
 
+    app.useGlobalFilters(
+      new AllExceptionsFilter(),
+      new DatabaseExceptionsFilter(),
+      new KafkaExceptionsFilter(),
+    );
+
     app.connectMicroservice<MicroserviceOptions>(consumerConfig);
 
     await app.startAllMicroservices();
@@ -18,6 +25,7 @@ async function bootstrap() {
     logger.log('Token Updater Service is running on port 3001');
   } catch (error) {
     logger.error(`Error: ${error.message}`);
+    process.exit(1);
   }
 }
 bootstrap();
