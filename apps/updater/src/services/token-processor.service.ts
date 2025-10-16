@@ -37,8 +37,8 @@ export class TokenProcessorService {
       await this.kafkaProducer.sendPriceUpdateMessage(message);
       this.logger.log(`Processed token ${token.tokenId} with new price ${newPrice.toFixed(2)}`);
       return { id: token.id, status: FeedStatus.PROCESSED, oldPrice: token.oldPrice, newPrice };
-    } catch (e: any) {
-      const msg = typeof e?.message === 'string' ? e.message : String(e);
+    } catch (e: unknown) {
+      const msg = typeof (e as Error)?.message === 'string' ? (e as Error).message : String(e);
       this.logger.warn(`Error processing token ${token.tokenId}: ${msg}`);
       return { id: token.id, status: FeedStatus.FAILED, oldPrice: token.oldPrice, error: msg };
     }

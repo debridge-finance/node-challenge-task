@@ -9,7 +9,7 @@ async function bootstrap() {
 
   try {
     const app = await NestFactory.create(AppModule);
-    
+
     app.useGlobalFilters(
       new AllExceptionsFilter(),
       new DatabaseExceptionsFilter(),

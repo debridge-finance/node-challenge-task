@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy, Inject, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, Inject, OnModuleInit } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { TokenBatchMessage } from '../../models/token-batch-message';
 
