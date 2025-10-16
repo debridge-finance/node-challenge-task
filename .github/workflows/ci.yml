@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Prettier
+        run: npx prettier --check "apps/**/*.ts"
+
+      - name: ESLint
+        run: npx eslint "{src,apps,libs,test}/**/*.ts"
+
+      - name: tests
+        run: npm test
+
+      - name: Build scheduler Docker image
+        run: docker build -t token-scheduler-service -f apps/scheduler/Dockerfile .
+
+      - name: Build updater Docker image
+        run: docker build -t token-updater-service -f apps/updater/Dockerfile .
