@@ -13,7 +13,7 @@ async function bootstrap() {
     app.useGlobalFilters(
       new AllExceptionsFilter(),
       new DatabaseExceptionsFilter(),
-      new KafkaExceptionsFilter()
+      new KafkaExceptionsFilter(),
     );
 
     await app.listen(3002);

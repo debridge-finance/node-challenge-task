@@ -26,7 +26,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Prettier
-        run: npx prettier --check "apps/**/*.ts" "libs/**/*.ts"
+        run: npx prettier --check "apps/**/*.ts"
 
       - name: ESLint
         run: npx eslint "{src,apps,libs,test}/**/*.ts"

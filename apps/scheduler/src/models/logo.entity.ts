@@ -24,6 +24,6 @@ export class Logo {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
 
-  @OneToMany(() => Token, token => token.logo)
+  @OneToMany(() => Token, (token) => token.logo)
   tokens: Token[];
 }
