@@ -59,49 +59,19 @@ export class TokenProcessorService {
   batchUpdateTokens = async (updates: TokenUpdate[]) => {
     if (!updates.length) return;
 
-    const { success, failed } = updates.reduce(
-      (acc, u) => {
-        if (u.status === FeedStatus.PROCESSED) acc.success.push(u);
-        if (u.status === FeedStatus.FAILED) acc.failed.push(u);
-        return acc;
-      },
-      { success: [] as TokenUpdate[], failed: [] as TokenUpdate[] },
-    );
+    const queries = updates.map((update) => ({
+      id: update.id,
+      status: update.status,
+      newPrice: update.status === FeedStatus.PROCESSED ? update.newPrice : undefined,
+      error: update.status === FeedStatus.FAILED ? update.error : undefined,
+    }));
 
-    const successfulUpdatesByPrice = this.groupUpdatesByProperty(success, 'newPrice');
-    const failedUpdatesByError = this.groupUpdatesByProperty(failed, 'error');
+    await this.feedRepository.save(queries);
 
-    await Promise.all(
-      Object.entries(successfulUpdatesByPrice).map(([price, group]) =>
-        this.feedRepository.update(
-          { id: In(group.map((g) => g.id)) },
-          { status: FeedStatus.PROCESSED, newPrice: Number(price) },
-        ),
-      ),
-    );
+    const successCount = updates.filter((u) => u.status === FeedStatus.PROCESSED).length;
+    const failedCount = updates.filter((u) => u.status === FeedStatus.FAILED).length;
 
-    if (success.length) this.logger.log(`Updated ${success.length} tokens to PROCESSED status`);
-
-    await Promise.all(
-      Object.entries(failedUpdatesByError).map(([error, group]) =>
-        this.feedRepository.update(
-          { id: In(group.map((g) => g.id)) },
-          { status: FeedStatus.FAILED, error },
-        ),
-      ),
-    );
-
-    if (failed.length) this.logger.log(`Updated ${failed.length} tokens to FAILED status`);
+    if (successCount) this.logger.log(`Updated ${successCount} tokens to PROCESSED status`);
+    if (failedCount) this.logger.log(`Updated ${failedCount} tokens to FAILED status`);
   };
-
-  groupUpdatesByProperty = <T extends keyof TokenUpdate>(
-    updates: TokenUpdate[],
-    property: T,
-  ): Record<string, TokenUpdate[]> =>
-    updates.reduce((groups, update) => {
-      const key = String(update[property] ?? 'null');
-      const list = groups[key] || [];
-      groups[key] = [...list, update];
-      return groups;
-    }, {} as Record<string, TokenUpdate[]>);
 }

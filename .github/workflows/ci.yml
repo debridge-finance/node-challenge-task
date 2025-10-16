@@ -25,13 +25,13 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
-      - name: Prettier check
+      - name: Prettier
         run: npx prettier --check "apps/**/*.ts" "libs/**/*.ts"
 
-      - name: ESLint check
+      - name: ESLint
         run: npx eslint "{src,apps,libs,test}/**/*.ts"
 
-      - name: Run tests
+      - name: tests
         run: npm test
 
       - name: Build scheduler Docker image
