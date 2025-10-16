@@ -1,18 +1,45 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const logger = new Logger('Main');
-  logger.log('Starting Token Price Service...');
-  
+  const logger = new Logger("Main");
+  logger.log("Starting Token Price Service...");
+
   try {
-    const app = await NestFactory.create(AppModule);
-    await app.listen(3000);
-    logger.log('Service is running on port 3000');
+    const app = await NestFactory.create(AppModule, { bufferLogs: true });
+    app.enableShutdownHooks();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true }
+      })
+    );
+
+    const port = Number(process.env.PORT) || 3000;
+    await app.listen(port);
+    logger.log(`Service is running on port ${port}`);
+
+    const gracefulShutdown = async (signal: string) => {
+      logger.log(`Received ${signal}. Shutting down gracefully...`);
+      try {
+        await app.close();
+        logger.log("Application closed. Bye!");
+        process.exit(0);
+      } catch (closeError) {
+        logger.error("Error during shutdown", (closeError as Error).stack);
+        process.exit(1);
+      }
+    };
+
+    process.on("SIGINT", () => void gracefulShutdown("SIGINT"));
+    process.on("SIGTERM", () => void gracefulShutdown("SIGTERM"));
   } catch (error) {
-    // Bug: Not handling exceptions properly
-    logger.error(`Error: ${error.message}`);
+    logger.error("Fatal error during bootstrap", (error as Error).stack);
+    process.exit(1);
   }
 }
 bootstrap();

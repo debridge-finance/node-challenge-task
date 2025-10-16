@@ -1,0 +1,193 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - 'gitops/**'
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  packages: write
+  security-events: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/token-price-service
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tokens_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      kafka:
+        image: confluentinc/cp-kafka:7.3.0
+        env:
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        ports:
+          - 9092:9092
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Setup Node.js
+      run: |
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Run tests
+      run: npm run test
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tokens_test
+        KAFKA_BROKERS: localhost:9092
+
+    - name: Run e2e tests
+      run: npm run test:e2e
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tokens_test
+        KAFKA_BROKERS: localhost:9092
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up Docker Buildx
+      run: |
+        docker buildx create --use
+        docker buildx inspect --bootstrap
+
+    - name: Log in to Container Registry
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+    - name: Build and push Docker image
+      run: |
+        VERSION="${{ github.ref_name }}"
+        docker buildx build \
+          --platform linux/amd64 \
+          --file ./Dockerfile \
+          --tag "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" \
+          --tag "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" \
+          --push \
+          .
+
+    - name: Output image
+      id: image
+      run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+  security-scan:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+
+    steps:
+    - name: Install Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install wget apt-transport-https gnupg lsb-release
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install trivy
+
+    - name: Run Trivy vulnerability scanner
+      run: |
+        trivy image --format sarif --output trivy-results.sarif ${{ needs.build.outputs.image }}
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      run: |
+        # This would need to be implemented with GitHub API calls
+        echo "Security scan completed. Results saved to trivy-results.sarif"
+
+  gitops-update:
+    needs: [build, security-scan]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        ref: main
+
+    - name: Update production image tag in GitOps manifests
+      run: |
+        VERSION="${{ github.ref_name }}"
+        FILE="gitops/overlays/production/deployment-patch.yaml"
+        REPO_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+
+        # Replace image tag line
+        sed -i.bak "s#^\(\s*image:\s*\)${REPO_IMAGE}:.*#\1${REPO_IMAGE}:${VERSION}#" "$FILE"
+        rm -f "$FILE.bak"
+
+        echo "Updated image to ${REPO_IMAGE}:${VERSION} in $FILE"
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "chore: deploy ${{ github.ref_name }} to production"
+        title: "🚀 Deploy ${{ github.ref_name }} to production"
+        body: |
+          ## GitOps Update
+
+          Automated deployment of version `${{ github.ref_name }}` to production environment.
+
+          **Image:** `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}`
+
+          ### Changes
+          - Updated production deployment image tag
+
+          This PR was automatically created by the CI/CD pipeline after successful build and security scan.
+        branch: gitops/deploy-${{ github.ref_name }}
+        delete-branch: true
+        labels: |
+          gitops
+          automated
+          production

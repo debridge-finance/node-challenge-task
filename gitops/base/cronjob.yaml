@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: price-updater
+spec:
+  schedule: "*/5 * * * *"  # Каждые 5 минут (обновление 10k токенов занимает ~2-3 мин, запас для надёжности)
+  concurrencyPolicy: Forbid  # Не запускать новый job если предыдущий еще выполняется
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2  # Количество попыток при неудаче
+      template:
+        metadata:
+          labels:
+            app: price-updater
+            job: cron
+        spec:
+          serviceAccountName: price-updater
+          restartPolicy: Never
+          containers:
+          - name: price-updater
+            image: curlimages/curl:8.10.1
+            envFrom:
+            - secretRef:
+                name: token-price-service-secrets
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                cpu: 50m
+                memory: 64Mi
+            command: ["/bin/sh", "-c"]
+            args:
+            - |
+              echo "$(date -u '+%Y-%m-%d %H:%M:%S UTC') - Triggering price update..."
+
+              HTTP_CODE=$(curl -fsS -w "%{http_code}" -o /tmp/response.json \
+                -H 'Content-Type: application/json' \
+                -H 'User-Agent: K8s-CronJob-PriceUpdater/1.0' \
+                -H "x-internal-job-token: $INTERNAL_JOB_TOKEN" \
+                -m 300 -X POST \
+                http://token-price-service:3000/pricing/trigger-update)
+
+              if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+                echo "Price update completed successfully (HTTP $HTTP_CODE)"
+                cat /tmp/response.json
+                exit 0
+              else
+                echo "Price update failed (HTTP $HTTP_CODE)"
+                cat /tmp/response.json
+                exit 1
+              fi

@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: token-price-service
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    spec:
+      imagePullSecrets:
+      - name: ghcr-cred
+      containers:
+      - name: token-price-service
+        image: ghcr.io/uniwertz/token-price-service:v1.0.9
+        imagePullPolicy: IfNotPresent
