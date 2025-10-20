@@ -1,7 +1,7 @@
 {
   "name": "token-price-service",
-  "version": "1.0.0",
-  "description": "A token price service with intentional anti-patterns and bugs for educational purposes",
+  "version": "2.0.0",
+  "description": "A token price service base infrastructure",
   "main": "dist/main.js",
   "scripts": {
     "build": "nest build",
@@ -16,12 +16,11 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typeorm": "typeorm-ts-node-commonjs",
-    "migration:generate": "npm run typeorm -- migration:generate -d src/data/data-source.ts",
-    "migration:create": "npm run typeorm -- migration:create",
-    "migration:run": "ts-node -r tsconfig-paths/register src/migrations/run-migrations.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/data/data-source.ts",
-    "db:seed": "ts-node -r tsconfig-paths/register src/data/seed.ts"
+    "typeorm": "typeorm",
+    "typeorm:migration-generate": "npx typeorm-ts-node-commonjs migration:generate -d ./datasource/config/ormconfig.ts",
+    "typeorm:migration-run": "npx typeorm-ts-node-commonjs migration:run -d ./datasource/config/ormconfig.ts",
+    "typeorm:migration-run-prod": "npx typeorm migration:run -d ./dist/datasource/config/ormconfig.js",
+    "typeorm:migration-create": "npx typeorm-ts-node-commonjs migration:create"
   },
   "keywords": [
     "nestjs",

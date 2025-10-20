@@ -1,198 +1,190 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { GenericContainer, StartedTestContainer } from 'testcontainers';
-import { Kafka, Consumer, KafkaMessage } from 'kafkajs';
-import { Token } from '../../models/token.entity';
-import { TokenPriceUpdateService } from '../../services/token-price-update.service';
-import { MockPriceService } from '../../services/mock-price.service';
-import { KafkaProducerService } from '../../kafka/kafka-producer.service';
-import { TokenPriceUpdateMessage } from '../../models/token-price-update-message';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { Test, TestingModule } from "@nestjs/testing";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { GenericContainer, StartedTestContainer } from "testcontainers";
+import { Token } from "../../modules/tokens/entities/token.entity";
+import { TokenPrices } from "../../modules/token-prices/entity/token-prices.entity";
+import { Chain } from "../../modules/chains/entities/chain.entity";
+import { TokenMetadata } from "../../modules/tokens-metadata/entities/token-metadata.entity";
+import { ItemLogo } from "../../modules/item-logo/entities/item-logo.entity";
+import { TokenRepository } from "../../modules/tokens/repository/token.repository";
+import { TokenPricesRepository } from "../../modules/token-prices/repository/token-prices.repository";
+import { ChainRepository } from "../../modules/chains/repository/chain.repository";
+import { TokenMetadataRepository } from "../../modules/tokens-metadata/repository/token-metadata.repository";
+import { ItemLogoRepository } from "../../modules/item-logo/repository/item-logo.repository";
+import { MockPriceService } from "../../modules/tokens-invalidation/prices-invalidation/sources/mock/services/mock-price.service";
+import { PriceUpdateIntervalService } from "../../modules/tokens-invalidation/prices-invalidation/sources/mock/services/price-update-interval.service";
+import { TokenPriceInvalidationService } from "../../modules/tokens-invalidation/prices-invalidation/sources/mock/services/token-price-invalidation.service";
+import { TokenPriceKafkaService } from "../../modules/tokens-invalidation/prices-invalidation/services/token-price-kafka.service";
+import { KafkaProducerService } from "../../modules/kafka/services/kafka-producer.service";
+import { KafkaConnectionService } from "../../modules/kafka/services/kafka-connection.service";
+import { CHAIN_SLUGS } from "../../modules/chains/libs/constants/chain-slugs.const";
 
-describe('TokenPriceService Integration Tests', () => {
+describe("TokenPriceService Integration Tests", () => {
   let postgresContainer: StartedTestContainer;
-  let zookeeperContainer: StartedTestContainer;
-  let kafkaContainer: StartedTestContainer;
   let moduleRef: TestingModule;
-  let tokenRepository: Repository<Token>;
-  let tokenPriceUpdateService: TokenPriceUpdateService;
-  let kafkaConsumer: Consumer;
-  
-  const kafkaTopic = 'token-price-updates';
+  let tokenRepository: TokenRepository;
+  let chainRepository: ChainRepository;
+  let tokenMetadataRepository: TokenMetadataRepository;
+  let itemLogoRepository: ItemLogoRepository;
+  let tokenPriceInvalidationService: TokenPriceInvalidationService;
+
   const testId = Math.random().toString(36).substring(7);
-  
-  const getAvailablePort = async (): Promise<number> => {
-    // Use a random port between 10000 and 65535
-    return Math.floor(Math.random() * 55535) + 10000;
-  };
-  
+
   beforeAll(async () => {
-    jest.setTimeout(120000); // 2 minutes timeout for container startup
-    
+    jest.setTimeout(60000); // 1 minute timeout for container startup
+
     try {
-      // Get available ports
-      const zookeeperPort = await getAvailablePort();
-      const kafkaPort = await getAvailablePort();
-      const postgresPort = await getAvailablePort();
-      
       // Start PostgreSQL container
-      postgresContainer = await new GenericContainer('postgres:15-alpine')
+      postgresContainer = await new GenericContainer("postgres:15-alpine")
         .withName(`postgres-test-${testId}`)
         .withEnvironment({
-          POSTGRES_USER: 'testuser',
-          POSTGRES_PASSWORD: 'testpassword',
-          POSTGRES_DB: 'testdb',
+          POSTGRES_USER: "testuser",
+          POSTGRES_PASSWORD: "testpassword",
+          POSTGRES_DB: "testdb",
         })
         .withExposedPorts(5432)
         .start();
-      
+
       const postgresHost = postgresContainer.getHost();
       const mappedPostgresPort = postgresContainer.getMappedPort(5432);
-      
-      // Start Zookeeper container (required for Kafka)
-      zookeeperContainer = await new GenericContainer('confluentinc/cp-zookeeper:7.3.0')
-        .withName(`zookeeper-test-${testId}`)
-        .withEnvironment({
-          ZOOKEEPER_CLIENT_PORT: '2181',
-          ZOOKEEPER_TICK_TIME: '2000',
-        })
-        .withExposedPorts(2181)
-        .start();
-      
-      // Wait for Zookeeper to start
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Start Kafka container
-      kafkaContainer = await new GenericContainer('confluentinc/cp-kafka:7.3.0')
-        .withName(`kafka-test-${testId}`)
-        .withEnvironment({
-          KAFKA_BROKER_ID: '1',
-          KAFKA_ZOOKEEPER_CONNECT: `${zookeeperContainer.getHost()}:${zookeeperContainer.getMappedPort(2181)}`,
-          KAFKA_ADVERTISED_LISTENERS: `PLAINTEXT://${kafkaContainer.getHost()}:${kafkaPort}`,
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: '1',
-          KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true',
-        })
-        .withExposedPorts(9092)
-        .start();
-      
-      const kafkaHost = kafkaContainer.getHost();
-      const mappedKafkaPort = kafkaContainer.getMappedPort(9092);
-      
-      // Wait for Kafka to be fully ready
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      
-      // Setup Kafka consumer
-      const kafka = new Kafka({
-        clientId: 'test-client',
-        brokers: [`${kafkaHost}:${mappedKafkaPort}`],
-      });
-      
-      kafkaConsumer = kafka.consumer({ groupId: 'test-consumer-group' });
-      await kafkaConsumer.connect();
-      await kafkaConsumer.subscribe({ topic: kafkaTopic, fromBeginning: true });
-      
+
       // Create NestJS test module
       moduleRef = await Test.createTestingModule({
         imports: [
           TypeOrmModule.forRoot({
-            type: 'postgres',
+            type: "postgres",
             host: postgresHost,
             port: mappedPostgresPort,
-            username: 'testuser',
-            password: 'testpassword',
-            database: 'testdb',
-            entities: [Token],
+            username: "testuser",
+            password: "testpassword",
+            database: "testdb",
+            entities: [Token, TokenPrices, Chain, TokenMetadata, ItemLogo],
             synchronize: true,
           }),
-          TypeOrmModule.forFeature([Token]),
+          TypeOrmModule.forFeature([
+            Token,
+            TokenPrices,
+            Chain,
+            TokenMetadata,
+            ItemLogo,
+          ]),
         ],
         providers: [
-          TokenPriceUpdateService,
+          TokenRepository,
+          TokenPricesRepository,
+          ChainRepository,
+          TokenMetadataRepository,
+          ItemLogoRepository,
           MockPriceService,
+          TokenPriceKafkaService,
+          TokenPriceInvalidationService,
+          PriceUpdateIntervalService,
           {
             provide: KafkaProducerService,
             useValue: {
-              sendPriceUpdateMessage: jest.fn().mockImplementation(
-                (message: TokenPriceUpdateMessage) => Promise.resolve(),
-              ),
+              sendMessage: jest
+                .fn()
+                .mockImplementation(() => Promise.resolve()),
+              sendMessages: jest
+                .fn()
+                .mockImplementation(() => Promise.resolve()),
+            },
+          },
+          {
+            provide: KafkaConnectionService,
+            useValue: {
+              ensureTopicExists: jest
+                .fn()
+                .mockImplementation(() => Promise.resolve()),
+              getProducer: jest.fn(),
             },
           },
         ],
       }).compile();
-      
-      tokenRepository = moduleRef.get<Repository<Token>>(getRepositoryToken(Token));
-      tokenPriceUpdateService = moduleRef.get<TokenPriceUpdateService>(TokenPriceUpdateService);
-      
+
+      tokenRepository = moduleRef.get<TokenRepository>(TokenRepository);
+      chainRepository = moduleRef.get<ChainRepository>(ChainRepository);
+      tokenMetadataRepository = moduleRef.get<TokenMetadataRepository>(
+        TokenMetadataRepository
+      );
+      itemLogoRepository =
+        moduleRef.get<ItemLogoRepository>(ItemLogoRepository);
+      tokenPriceInvalidationService =
+        moduleRef.get<TokenPriceInvalidationService>(
+          TokenPriceInvalidationService
+        );
     } catch (error) {
-      console.error('Error during test setup:', error);
+      console.error("Error during test setup:", error);
       throw error;
     }
-  }, 120000);
-  
+  }, 60000);
+
   afterAll(async () => {
     if (moduleRef) {
       await moduleRef.close();
     }
-    
-    if (kafkaConsumer) {
-      await kafkaConsumer.disconnect();
-    }
-    
+
     if (postgresContainer) {
       await postgresContainer.stop();
     }
-    
-    if (kafkaContainer) {
-      await kafkaContainer.stop();
-    }
-    
-    if (zookeeperContainer) {
-      await zookeeperContainer.stop();
-    }
   }, 30000);
-  
-  it('should update token price and send Kafka message', async () => {
-    // Create test token
-    const token = new Token();
-    token.address = Buffer.from([0x01, 0x02, 0x03]);
-    token.symbol = 'TEST';
-    token.name = 'Test Token';
-    token.decimals = 18;
-    token.isNative = false;
-    token.chainId = '11111111-1111-1111-1111-111111111111';
-    token.isProtected = false;
-    token.priority = 1;
-    token.timestamp = new Date();
-    token.chain_Id = '11111111-1111-1111-1111-111111111111';
-    token.chain_DeId = 1;
-    token.chain_Name = 'Test Chain';
-    token.chain_IsEnabled = true;
-    token.logo_Id = '22222222-2222-2222-2222-222222222222';
-    token.logo_TokenId = '33333333-3333-3333-3333-333333333333';
-    token.logo_BigRelativePath = '/test.png';
-    token.logo_SmallRelativePath = '/test_small.png';
-    token.logo_ThumbRelativePath = '/test_thumb.png';
-    token.price = 100;
-    token.lastPriceUpdate = new Date();
-    
+
+  it("should update token price and send Kafka message", async () => {
+    // Create required logo entity
+    const logo = itemLogoRepository.create({
+      big_relative_path: "/test/logo/big.png",
+      small_relative_path: "/test/logo/small.png",
+      thumb_relative_path: "/test/logo/thumb.png",
+    });
+    await itemLogoRepository.save(logo);
+
+    // Create required chain entity
+    const chain = chainRepository.create({
+      name: "Ethereum",
+      slug: CHAIN_SLUGS.ETHEREUM,
+      is_enabled: true,
+    });
+    await chainRepository.save(chain);
+
+    // Create required token metadata entity
+    const metadata = tokenMetadataRepository.create({
+      symbol: "TEST",
+      name: "Test Token",
+    });
+    await tokenMetadataRepository.save(metadata);
+
+    // Create test token with all required relations
+    const token = tokenRepository.create({
+      address: "0x0102030405060708090a0b0c0d0e0f1011121314",
+      decimals: 18,
+      is_native: false,
+      is_protected: false,
+      priority: 1,
+      chain: chain,
+      token_metadata: metadata,
+      logo: logo,
+    });
+
     await tokenRepository.save(token);
+
+    // Get the mocked Kafka producer to spy on it
+    const kafkaProducer =
+      moduleRef.get<KafkaProducerService>(KafkaProducerService);
+
+    // Manually trigger price invalidation (instead of waiting for interval)
+    await tokenPriceInvalidationService.invalidatePrices();
+
+    // Verify that KafkaProducerService.sendMessages was called
+    expect(kafkaProducer.sendMessages).toHaveBeenCalled();
     
-    // Start price update service
-    tokenPriceUpdateService.start();
-    
-    // Wait for price updates to occur
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Stop the service
-    tokenPriceUpdateService.stop();
-    
-    // Check if token price was updated in the database
-    const updatedToken = await tokenRepository.findOne({ where: { id: token.id } });
-    expect(updatedToken).toBeDefined();
-    expect(updatedToken.price).not.toEqual(100);
-    
-    // Note: In a real test, we would also check for Kafka messages,
-    // but since we're mocking the KafkaProducerService, we can't do that here
-  }, 10000);
+    // Verify the token now has a price
+    const updatedTokens = await tokenRepository.find({
+      where: { id: token.id },
+      relations: ["token_price"],
+    });
+    expect(updatedTokens).toHaveLength(1);
+    const updatedToken = updatedTokens[0];
+    expect(updatedToken.token_price).toBeDefined();
+    expect(updatedToken.token_price.usd_price).toBeDefined();
+  }, 15000);
 });

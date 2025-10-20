@@ -4,12 +4,15 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: token-price-postgres
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: tokens
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_SCHEMA: ${POSTGRES_SCHEMA}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -19,7 +22,7 @@ services:
       retries: 5
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.0
+    image: confluentinc/cp-zookeeper:7.9.0
     container_name: token-price-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -28,7 +31,7 @@ services:
       - "2181:2181"
 
   kafka:
-    image: confluentinc/cp-kafka:7.3.0
+    image: confluentinc/cp-kafka:7.9.0
     container_name: token-price-kafka
     depends_on:
       - zookeeper
