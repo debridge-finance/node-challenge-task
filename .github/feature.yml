@@ -1,0 +1,48 @@
+name: Run tests on branch push
+on:
+  push:
+    branches: ['feature/*', 'fix/*', 'hotfix/*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: tokens
+      KAFKA_BROKERS: localhost:9092
+      KAFKA_TOPIC: token-price-updates
+      KAFKA_CLIENT_ID: token-price-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20.16.0'
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@v3
+        with:
+          path: |
+            **/node_modules
+          key: | 
+            ${{ runner.os }}-build-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ hashFiles('**/package-lock.lock') }}
+      - name: Install dependencies
+        run: npm install
+      - uses: isbang/compose-action@v1.5.1
+        with:
+          compose-file: './docker-compose.yml'
+      - name: run migrations
+        run: npm run migration:run
+      - name: run tests
+        run: npm test
+      - name: run test coverage
+        run: npm run test:cov

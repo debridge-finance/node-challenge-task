@@ -1,5 +1,9 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn } from 'typeorm';
+import { Chain } from './chain.entity';
+import { Logo } from './logo.entity';
 
+
+// Denormalize schema to improve performance
 @Entity('tokens')
 export class Token {
   @PrimaryGeneratedColumn('uuid')
@@ -23,6 +27,10 @@ export class Token {
   @Column({ type: 'uuid' })
   chainId: string;
 
+  @ManyToOne(() => Chain, chain => chain.tokens, { eager: true })
+  @JoinColumn({ name: 'chainId' })
+  chain: Chain;
+
   @Column({ default: false })
   isProtected: boolean;
 
@@ -35,34 +43,12 @@ export class Token {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   timestamp: Date;
 
-  // Denormalized chain data (intentional anti-pattern)
-  @Column({ name: 'chain_id', type: 'uuid' })
-  chain_Id: string;
+  @Column({ type: 'uuid', nullable: true })
+  logoId: string;
 
-  @Column({ name: 'chain_deid', type: 'decimal' })
-  chain_DeId: number;
-
-  @Column({ name: 'chain_name' })
-  chain_Name: string;
-
-  @Column({ name: 'chain_isenabled', default: true })
-  chain_IsEnabled: boolean;
-
-  // Denormalized logo data (intentional anti-pattern)
-  @Column({ name: 'logo_id', type: 'uuid' })
-  logo_Id: string;
-
-  @Column({ name: 'logo_tokenid', type: 'uuid', nullable: true })
-  logo_TokenId: string;
-
-  @Column({ name: 'logo_bigrelativepath' })
-  logo_BigRelativePath: string;
-
-  @Column({ name: 'logo_smallrelativepath' })
-  logo_SmallRelativePath: string;
-
-  @Column({ name: 'logo_thumbrelativepath' })
-  logo_ThumbRelativePath: string;
+  @OneToOne(() => Logo, logo => logo.token, { eager: true })
+  @JoinColumn({ name: 'logoId' })
+  logo: Logo;
 
   @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
   price: number;
