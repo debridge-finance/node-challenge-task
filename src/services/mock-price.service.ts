@@ -4,17 +4,24 @@ import { Token } from '../models/token.entity';
 @Injectable()
 export class MockPriceService {
   async getRandomPriceForToken(token: Token): Promise<number> {
-    // Simulate API call delay  
-    await new Promise<void>((resolve) => {
+    // Имитация задержки вызова API
+    await new Promise<void>(resolve => {
       setTimeout(() => {
         resolve();
       }, this.getRandomInt(50, 200));
     });
-    
-    const basePrice = this.getRandomInt(1, 100000);
-    const randomFactor = Math.random() * 10;
-    
-    return basePrice * randomFactor;
+
+    // Генерация реалистичных изменений цен на основе текущей цены
+    // Изменение цены от -5% до +5% от текущей цены
+    // Fixed: PostgreSQL decimal returns as string, convert to number
+    const currentPriceValue =
+      typeof token.price === 'string' ? parseFloat(token.price) : token.price;
+    const currentPrice = currentPriceValue || 1000; // если цена не установлена
+    const changePercent = (Math.random() - 0.5) * 0.1; // -5% до +5%
+    const newPrice = currentPrice * (1 + changePercent);
+
+    // Цена всегда неотрицательная
+    return Math.max(0, newPrice);
   }
 
   private getRandomInt(min: number, max: number): number {

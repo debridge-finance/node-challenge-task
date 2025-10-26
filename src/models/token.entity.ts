@@ -64,8 +64,9 @@ export class Token {
   @Column({ name: 'logo_thumbrelativepath' })
   logo_ThumbRelativePath: string;
 
+  // PostgreSQL decimal is returned as string by TypeORM
   @Column({ type: 'decimal', precision: 28, scale: 0, default: 0 })
-  price: number;
+  price: number | string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   lastPriceUpdate: Date;

@@ -1,26 +1,29 @@
-import { AppDataSource } from './data-source';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from '../app.module';
 import { TokenSeeder } from './token.seeder';
-import { Token } from '../models/token.entity';
+import { Logger } from '@nestjs/common';
 
 async function seed() {
-  try {
-    // Initialize the data source
-    await AppDataSource.initialize();
-    console.log('Data source has been initialized');
+  const logger = new Logger('Seed');
 
-    // Create token seeder
-    const tokenRepository = AppDataSource.getRepository(Token);
-    const tokenSeeder = new TokenSeeder(tokenRepository);
+  try {
+    logger.log('Starting database seeding...');
+
+    // Create NestJS application context
+    const app = await NestFactory.createApplicationContext(AppModule);
+
+    // Get the seeder service from DI container
+    const tokenSeeder = app.get(TokenSeeder);
 
     // Seed data
     await tokenSeeder.seed();
-    console.log('Database seeded successfully');
+    logger.log('Database seeded successfully');
 
-    // Close the connection
-    await AppDataSource.destroy();
-    console.log('Data source has been closed');
+    // Close the application context
+    await app.close();
+    logger.log('Application context closed');
   } catch (error) {
-    console.error('Error during seeding process:', error);
+    logger.error('Error during seeding process:', error);
     process.exit(1);
   }
 }
@@ -31,7 +34,7 @@ seed()
     console.log('Seeding completed successfully');
     process.exit(0);
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('Failed to seed database:', error);
     process.exit(1);
   });

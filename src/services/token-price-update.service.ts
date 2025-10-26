@@ -11,7 +11,8 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
   private readonly logger = new Logger(TokenPriceUpdateService.name);
   private timer: NodeJS.Timeout;
   private readonly updateIntervalSeconds: number = 5;
-  private isRunning: boolean = false;
+  private readonly concurrencyLimit: number = 5;
+  private isRunning = false;
 
   constructor(
     @InjectRepository(Token)
@@ -20,6 +21,33 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     private readonly kafkaProducer: KafkaProducerService,
   ) {}
 
+  /**
+   * Простая и быстрая реализация очереди запросов
+   */
+  private async processConcurrently<T>(
+    items: T[],
+    fn: (item: T) => Promise<void>,
+    concurrency: number,
+  ): Promise<void> {
+    const results: Promise<void>[] = [];
+    const executing: Promise<void>[] = [];
+
+    for (const item of items) {
+      const promise = fn(item).then(() => {
+        executing.splice(executing.indexOf(promise), 1);
+      });
+
+      results.push(promise);
+      executing.push(promise);
+
+      if (executing.length >= concurrency) {
+        await Promise.race(executing);
+      }
+    }
+
+    await Promise.all(results);
+  }
+
   start(): void {
     if (this.isRunning) {
       this.logger.warn('Price update service is already running');
@@ -27,18 +55,17 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     }
 
     this.isRunning = true;
-    this.logger.log(`Starting price update service (interval: ${this.updateIntervalSeconds} seconds)...`);
-        
-    this.timer = setInterval(      
-      async () => {
-        try {
-          await this.updatePrices();
-        } catch (error) {
-          this.logger.error(`Error in price update interval: ${error.message}`);
-        }
-      },
-      this.updateIntervalSeconds * 1000,
+    this.logger.log(
+      `Starting price update service (interval: ${this.updateIntervalSeconds} seconds)...`,
     );
+
+    this.timer = setInterval(async () => {
+      try {
+        await this.updatePrices();
+      } catch (error) {
+        this.logger.error(`Error in price update interval: ${error.message}`);
+      }
+    }, this.updateIntervalSeconds * 1000);
 
     // Trigger an initial update immediately
     this.updatePrices().catch(error => {
@@ -50,20 +77,28 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
     try {
       const tokens = await this.tokenRepository.find();
       this.logger.log(`Updating prices for ${tokens.length} tokens...`);
-      
-      for (const token of tokens) {
-        await this.updateTokenPrice(token);
-      }
+
+      // Реализовал простой механизм очереди запросов с ограничением на 5 одновременных запросов
+      // Можно было бы реализовать с помощью Bull и Redis, но для тестового проекта этого достаточно
+      await this.processConcurrently(
+        tokens,
+        token => this.updateTokenPrice(token),
+        this.concurrencyLimit,
+      );
+
+      this.logger.log(
+        `Completed updating prices for ${tokens.length} tokens (concurrency: ${this.concurrencyLimit})`,
+      );
     } catch (error) {
-      this.logger.error(`Error updating prices: ${error.message}`);      
+      this.logger.error(`Error updating prices: ${error.message}`, error.stack);
     }
   }
 
   private async updateTokenPrice(token: Token): Promise<void> {
     try {
-      const oldPrice = token.price;
+      const oldPrice = typeof token.price === 'string' ? parseFloat(token.price) : token.price;
       const newPrice = await this.priceService.getRandomPriceForToken(token);
-      
+
       if (oldPrice !== newPrice) {
         // Create message for Kafka using Zod helper function
         const message = createTokenPriceUpdateMessage({
@@ -73,18 +108,18 @@ export class TokenPriceUpdateService implements OnModuleDestroy {
           newPrice,
           // timestamp will be set to current date by default if not provided
         });
-        
+
         await this.kafkaProducer.sendPriceUpdateMessage(message);
-        
+
         // Update token in database
         token.price = newPrice;
         token.lastPriceUpdate = new Date();
-        
+
         await this.tokenRepository.save(token);
         this.logger.log(`Updated price for ${token.symbol}: ${oldPrice} -> ${newPrice}`);
       }
     } catch (error) {
-      this.logger.error(`Error updating price for token ${token.id}: ${error.message}`);      
+      this.logger.error(`Error updating price for token ${token.id}: ${error.message}`);
     }
   }
 
