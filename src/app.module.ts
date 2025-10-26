@@ -1,38 +1,29 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Token } from './models/token.entity';
 import { TokenPriceUpdateService } from './services/token-price-update.service';
 import { MockPriceService } from './services/mock-price.service';
 import { KafkaProducerService } from './kafka/kafka-producer.service';
 import { TokenSeeder } from './data/token.seeder';
+import { appConfig, dbConfig, kafkaConfig } from './config/common';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [dbConfig, kafkaConfig, appConfig],
+      envFilePath: '.env',
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'postgres',
-      database: 'tokens',
-      entities: [Token],
-      migrations: [__dirname + '/migrations/*.{js,ts}'],
-      migrationsRun: true, // Run migrations automatically
-      synchronize: false, // Disabled when using migrations
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => configService.get('database'),
+      inject: [ConfigService],
     }),
     TypeOrmModule.forFeature([Token]),
   ],
   controllers: [],
-  providers: [
-    TokenPriceUpdateService,
-    MockPriceService,
-    KafkaProducerService,
-    TokenSeeder,
-  ],
+  providers: [TokenPriceUpdateService, MockPriceService, KafkaProducerService, TokenSeeder],
 })
 export class AppModule implements OnModuleInit {
   constructor(
@@ -41,14 +32,7 @@ export class AppModule implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    try {
-      // Seed initial data
-      await this.tokenSeeder.seed();
-      
-      // Start price update service
-      this.tokenPriceUpdateService.start();
-    } catch (error) {
-      console.error('Failed to initialize application:', error);
-    }
+    await this.tokenSeeder.seed();
+    this.tokenPriceUpdateService.start();
   }
 }
