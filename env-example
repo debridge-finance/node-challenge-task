@@ -1,0 +1,10 @@
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_USER=database_user
+DB_PASSWORD=database_password
+DB_NAME=database_name
+KAFKA_CLIENT_ID=kafka-service-client-id
+KAFKA_HOST=localhost
+KAFKA_PORT=9092
+ZOOKEEPER_PORT=2181
+SERVER_PORT=3000

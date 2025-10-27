@@ -1,16 +1,26 @@
-import { DataSource } from 'typeorm';
-import { Token } from '../models/token.entity';
-import { InitialMigration1684654321000 } from '../migrations/1684654321000-InitialMigration';
+// Implemented ConfigService
+import { ConfigService } from "@nestjs/config";
+import { DataSource, DataSourceOptions } from "typeorm";
+import { Token } from "../models/token.entity";
+
+export const getDataSourceOptions = (
+  configService: ConfigService
+): DataSourceOptions => ({
+  type: "postgres",
+  host: configService.get<string>("DB_HOST", "localhost"),
+  port: configService.get<number>("DB_PORT", Number(configService.get<string>("DB_PORT") || 5432)),
+  username: configService.get<string>("DB_USER"),
+  password: configService.get<string>("DB_PASSWORD"),
+  database: configService.get<string>("DB_NAME"),
+  entities: [Token],
+  synchronize: false,
+  logging: true,
+});
+
+const configServiceInstance = new ConfigService();
 
 export const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: 'localhost',
-  port: 5432,
-  username: 'postgres',
-  password: 'postgres',
-  database: 'tokens',
-  entities: [Token],
-  migrations: [InitialMigration1684654321000],
-  synchronize: false, // Set to false when using migrations
-  logging: true,
+  ...getDataSourceOptions(configServiceInstance),
+  migrations: [__dirname + "/migrations/*.{js,ts}"],
+  migrationsRun: true,
 });

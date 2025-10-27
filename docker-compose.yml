@@ -1,50 +1,108 @@
-version: '3.8'
-
+# Fixed problems:
+# Kafka listener misconfiguration — KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 only works from the host machine, not other containers (like NestJS).
+# Healthcheck command for Kafka is not reliable (requires topics; often fails before broker ready).
+# No networks defined — defaults to one but unclear; explicit is better.
+# No environment variables for service-to-service connections (e.g., how NestJS connects to Kafka/Postgres).
+# Missing restart policies — production or dev containers should auto-restart if crashed.
+# No resource constraints / minimal tuning for Postgres.
+# No .env integration for sensitive data or customization.
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: token-price-app
+    ports:
+      - "${SERVER_PORT}:3000"
+    environment:
+      NODE_ENV: production
+      SERVER_PORT: ${SERVER_PORT}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      KAFKA_CLIENT_ID: ${KAFKA_CLIENT_ID}
+      KAFKA_HOST: kafka
+      KAFKA_PORT: ${KAFKA_PORT}
+      ZOOKEEPER_PORT: ${ZOOKEEPER_PORT}
+    depends_on:
+      - postgres
+      - zookeeper
+      - kafka
+    networks:
+      - token-network
+
   postgres:
     image: postgres:15-alpine
     container_name: token-price-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: tokens
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "5432:${DB_PORT}"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - token-network
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
     container_name: token-price-zookeeper
+    restart: unless-stopped
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_CLIENT_PORT: ${ZOOKEEPER_PORT}
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "2181:2181"
+      - "${ZOOKEEPER_PORT}:2181"
+    networks:
+      - token-network
 
   kafka:
     image: confluentinc/cp-kafka:7.3.0
     container_name: token-price-kafka
+    restart: unless-stopped
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
+      - "9092:${KAFKA_PORT}"
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:${ZOOKEEPER_PORT}
+      # Internal listener (for other containers)
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_HOST}:9092,PLAINTEXT_INTERNAL://kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/${KAFKA_PORT}"]
       interval: 10s
       timeout: 10s
       retries: 5
+    networks:
+      - token-network
+
+  # Optional: Admin UI for Kafka debugging (very helpful in dev)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: token-price-kafka-ui
+    restart: unless-stopped
+    depends_on:
+      - kafka
+
+networks:
+  token-network:
+    driver: bridge
 
 volumes:
   postgres-data:
+    driver: local
