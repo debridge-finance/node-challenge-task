@@ -27,7 +27,7 @@ The repository is organized as follows:
 
 ## Getting Started
 
-See the [src/README.md](./src/README.md) for detailed instructions on how to run the application and tests.
+See the [./DESCRIPTION.md](./DESCRIPTION.md) for detailed instructions on how to run the application and tests.
 
 ## Features
 
